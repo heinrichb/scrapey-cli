@@ -1,17 +1,17 @@
 // File: pkg/config/config.go
-
 package config
 
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"github.com/fatih/color"
 	"github.com/heinrichb/scrapey-cli/pkg/utils"
+	"os"
 )
 
 // Config holds configuration data.
 type Config struct {
-	URL string `json:"url,omitempty"`
+	URL        string `json:"url,omitempty"`
 	PARSERULES struct {
 		TITLE string `json:"title,omitempty"`
 		METADESCRIPTION string `json:"metaDescription,omitempty"`
@@ -25,7 +25,7 @@ func Load(filePath string) (*Config, error) {
 		return nil, fmt.Errorf("config file %s does not exist", filePath)
 	}
 
-	fmt.Printf("Loading config from %s\n", filePath)
+	fmt.Printf("%s%s\n", color.New(color.FgHiGreen).Sprint("Loaded config from: "), filePath)
 
 	// Read the file contents using os.ReadFile (replacing deprecated ioutil.ReadFile).
 	content, err := os.ReadFile(filePath)

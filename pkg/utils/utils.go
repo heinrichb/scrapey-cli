@@ -4,8 +4,8 @@ package utils
 
 import (
     "fmt"
-    "reflect"
     "github.com/fatih/color"
+    "reflect"
 )
 // PrintNonEmptyFields dynamically traverses a struct and prints its non-empty string fields.
 //

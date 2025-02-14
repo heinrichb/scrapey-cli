@@ -1,5 +1,4 @@
 // File: pkg/crawler/crawler.go
-
 package crawler
 
 // Crawler is responsible for fetching HTML content from URLs.
