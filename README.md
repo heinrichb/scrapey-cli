@@ -27,11 +27,14 @@ Scrapey CLI is a lightweight, configurable web crawler and scraper. It collects 
    cd scrapey-cli
    go mod tidy
 
-3. **Build the CLI**:
-   go build ./cmd/scrapeycli
+3. **Build the CLI**:  
+   Use the provided Makefile to build the binary into the `build` folder:
+   make build
+   Alternatively, you can run:
+   go build -o build/scrapeycli ./cmd/scrapeycli
 
 4. **Run**:
-   ./scrapeycli --config configs/default.json
+   ./build/scrapeycli --config configs/default.json
 
 ---
 
@@ -39,23 +42,34 @@ Scrapey CLI is a lightweight, configurable web crawler and scraper. It collects 
 
 ```
 scrapey-cli/
+├── .github/                 # GitHub-specific configurations
+│   └── workflows/
+│       └── ci.yml           # GitHub Actions CI/CD pipeline configuration
+├── .vscode/                 # VS Code settings
+│   └── settings.json        # Editor settings (format on save for Go)
+├── build/                   # Build scripts, Dockerfiles, etc.
 ├── cmd/
-│ └── scrapeycli/
-│ └── main.go # CLI entry point
-├── pkg/
-│ ├── config/ # Config loading logic
-│ ├── crawler/ # Core web crawling logic
-│ ├── parser/ # HTML parsing logic
-│ └── storage/ # JSON/other storage logic
+│   └── scrapeycli/          # CLI application entry point
+│       └── main.go          # Main Go file for Scrapey CLI
 ├── configs/
-│ └── default.json # Example config
-├── .github/
-│ └── workflows/
-│ └── ci.yml # CI/CD pipeline config
-├── docs/ # Additional documentation
-├── build/ # Build scripts, Dockerfiles, etc.
-├── test/ # Optional integration tests
-└── README.md # This file
+│   └── default.json         # Default/example configuration file
+├── docs/                    # Project documentation
+├── pkg/                     # Public packages for external use
+│   ├── config/
+│   │   └── config.go        # Config loading logic (stubbed)
+│   ├── crawler/
+│   │   └── crawler.go       # Core web crawling logic (stubbed)
+│   ├── parser/
+│   │   └── parser.go        # HTML parsing logic (stubbed)
+│   └── storage/
+│       └── storage.go       # Storage logic (stubbed for JSON and others)
+├── test/                    # Optional integration tests
+├── .gitignore               # Git ignore file
+├── LICENSE                  # MIT License file
+├── Makefile                 # Build script to output binary into build folder
+├── go.mod                   # Go module file
+├── go.sum                   # Go module checksum file
+└── README.md                # Project README
 ```
 
 ---
@@ -63,10 +77,10 @@ scrapey-cli/
 ## 🛠 Usage
 
 - **Basic**:
-  ./scrapeycli --url https://example.com
+  ./build/scrapeycli --url https://example.com
 
 - **With config file**:
-  ./scrapeycli --config configs/default.json
+  ./build/scrapeycli --config configs/default.json
 
 - **Future**:
   - Save data to JSON
