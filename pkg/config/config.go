@@ -17,6 +17,7 @@ type Config struct {
 		TITLE string `json:title,omitempty`
 		METADESCRIPTION string `json:metaDescription,omitempty`
 	}
+}
 
 // Load reads config from the specified filePath.
 // Returns an error if the file does not exist or if the JSON is invalid.
@@ -38,18 +39,6 @@ func Load(filePath string) (*Config, error) {
 	if err := json.Unmarshal(content, &cfg); err != nil {
 		return nil, fmt.Errorf("invalid JSON in config file: %v", err)
 	}
-	// In future, parse JSON from filePath
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	var cfg Config
-    decoder := json.NewDecoder(file)
-    if err := decoder.Decode(&cfg); err != nil {
-        return nil, err
-    }
-
 	printNonEmptyFields("", cfg)
     return &cfg, nil
 }
