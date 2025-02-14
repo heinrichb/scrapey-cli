@@ -15,10 +15,10 @@ import (
 FprintColored writes a colored line to the provided writer.
 
 Parameters:
-  - w: An io.Writer where the output will be written.
-  - prefix: The string to be printed in the specified color (or white if no color is provided).
-  - secondary: The string printed immediately after the colored prefix in default formatting.
-  - attrs: A variadic parameter of color attributes. If none are provided, white is used.
+  - w: The io.Writer where output is written.
+  - prefix: The string to print in the specified color (defaults to white if no color is provided).
+  - secondary: The string printed immediately after the colored prefix.
+  - attrs: Variadic color attributes; if none are provided, white is used.
 
 Usage:
 
@@ -43,17 +43,21 @@ func FprintColored(w io.Writer, prefix, secondary string, attrs ...color.Attribu
 }
 
 /*
-PrintColoredDynamic writes multiple colored string segments to the provided writer on the same line.
+FprintColoredDynamic writes multiple colored string segments to the provided writer on one line.
 
 Parameters:
-  - w: An io.Writer where the output will be written.
-  - texts: A slice of strings to be printed sequentially.
-  - colors: A slice of color attributes corresponding to each text segment.
+  - w: The io.Writer for output.
+  - texts: A slice of strings to print sequentially.
+  - colors: A slice of color attributes corresponding to each text.
+    If there are more texts than colors, the last provided color is used for the remaining texts.
 
-Behavior:
-  - For each text, if a color is specified at that index, that color is used.
-  - If there are more texts than colors, the last provided color is used for the remaining texts.
-  - All text segments are printed on the same line, and a newline is added at the end.
+Usage:
+
+	FprintColoredDynamic(os.Stdout, []string{"A ", "B ", "C"}, []color.Attribute{color.FgHiGreen, color.FgHiMagenta})
+
+Notes:
+
+	All text segments are printed on the same line, followed by a newline.
 */
 func FprintColoredDynamic(w io.Writer, texts []string, colors []color.Attribute) {
 	for i, text := range texts {
@@ -72,50 +76,44 @@ func FprintColoredDynamic(w io.Writer, texts []string, colors []color.Attribute)
 
 /*
 PrintColoredDynamicToStdout is a convenience function that writes dynamic colored output to os.Stdout.
-
-Usage:
-
-	PrintColoredDynamicToStdout([]string{"One ", "Two ", "Three "}, []color.Attribute{color.FgRed, color.FgGreen, color.FgBlue})
 */
 func PrintColoredDynamicToStdout(texts []string, colors []color.Attribute) {
 	FprintColoredDynamic(os.Stdout, texts, colors)
 }
 
 /*
-PrintColored is the main exported function for this util. It dynamically determines how to print colored output based on the arguments provided.
+PrintColored is the main exported function for this utility.
+It dynamically determines how to print colored output based on the types of arguments passed.
 
 Usage:
- 1. To print a simple colored line with a prefix and secondary text:
-    PrintColored("Prefix: ", "Secondary", color.FgHiGreen)
- 2. To print a single string in a default color:
+ 1. To print a single string:
     PrintColored("Just a string")
+ 2. To print a prefix and secondary string with a color:
+    PrintColored("Prefix: ", "Secondary", color.FgHiGreen)
  3. To print multiple segments with individual colors:
     PrintColored([]string{"Segment1 ", "Segment2 ", "Segment3"},
     []color.Attribute{color.FgHiGreen, color.FgHiMagenta})
 
 Behavior:
-  - If the first argument is a []string, it expects the second argument to be a []color.Attribute and calls the dynamic multi-segment printer.
+  - If the first argument is a []string, it expects a second argument as []color.Attribute and calls the dynamic printer.
   - Otherwise, if the first argument is a string:
-  - With only one argument, it prints that string in white.
-  - With two arguments (both strings), it prints the first string in white followed by the second string in default formatting.
-  - With additional arguments of type color.Attribute, it uses those attributes to color the prefix.
+  - With one argument, prints that string in white.
+  - With two arguments (both strings), prints the first in white and the second in default formatting.
+  - With additional arguments of type color.Attribute (or a slice thereof), uses them to color the prefix.
 */
 func PrintColored(args ...interface{}) {
-	// No arguments: nothing to print.
 	if len(args) == 0 {
 		return
 	}
 
-	// Check if the first argument is a slice of strings.
+	// Dynamic mode: if the first argument is a []string.
 	if texts, ok := args[0].([]string); ok {
-		// Expect a second argument as []color.Attribute, if provided.
 		var colors []color.Attribute
 		if len(args) > 1 {
 			if cols, ok := args[1].([]color.Attribute); ok {
 				colors = cols
 			}
 		}
-		// Use the dynamic printing function.
 		PrintColoredDynamicToStdout(texts, colors)
 		return
 	}
@@ -123,11 +121,9 @@ func PrintColored(args ...interface{}) {
 	// Otherwise, assume the first argument is a string.
 	prefix, ok := args[0].(string)
 	if !ok {
-		// If not, do nothing.
 		return
 	}
 
-	// Determine the secondary string.
 	secondary := ""
 	if len(args) >= 2 {
 		if sec, ok := args[1].(string); ok {
@@ -135,12 +131,10 @@ func PrintColored(args ...interface{}) {
 		}
 	}
 
-	// Gather any color attributes passed.
 	var attrs []color.Attribute
 	if len(args) > 2 {
-		// Iterate over the remaining arguments.
+		// Collect any color attributes (supports individual values or a slice).
 		for _, arg := range args[2:] {
-			// Use reflection to support both a single color or a slice of colors.
 			v := reflect.ValueOf(arg)
 			switch v.Kind() {
 			case reflect.Slice:
@@ -158,11 +152,9 @@ func PrintColored(args ...interface{}) {
 		}
 	}
 
-	// If no colors are provided, default to white.
 	if len(attrs) == 0 {
 		attrs = append(attrs, color.FgWhite)
 	}
 
-	// Print using FprintColored to os.Stdout.
 	FprintColored(os.Stdout, prefix, secondary, attrs...)
 }

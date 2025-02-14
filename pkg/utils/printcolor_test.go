@@ -13,10 +13,11 @@ import (
 )
 
 /*
-init forces color output for tests.
-This ensures that the ANSI escape sequences are emitted even if os.Stdout is not a TTY.
+init sets the TERM environment variable to force color output during tests.
+This ensures that ANSI escape sequences are emitted even in non-TTY environments.
 */
 func init() {
+	os.Setenv("TERM", "xterm-256color")
 	color.NoColor = false
 }
 
@@ -39,8 +40,8 @@ func captureStdout(f func()) string {
 }
 
 /*
-TestPrintColored_SingleString verifies that calling PrintColored with only a single string argument
-prints that string in the default white color.
+TestPrintColored_SingleString verifies that calling PrintColored with a single string prints that string in white.
+We expect ANSI escape codes to be present due to the forced TERM setting.
 */
 func TestPrintColored_SingleString(t *testing.T) {
 	output := captureStdout(func() {
@@ -49,37 +50,33 @@ func TestPrintColored_SingleString(t *testing.T) {
 	if !strings.Contains(output, "Just a test string") {
 		t.Errorf("Expected output to contain %q, got: %q", "Just a test string", output)
 	}
-	// We expect ANSI codes for white if forced; check that at least one ANSI code is present.
+	// Check that ANSI escape sequences are present.
 	if !strings.Contains(output, "\x1b[") {
-		t.Errorf("Expected output to contain ANSI escape codes for white, got: %q", output)
+		t.Errorf("Expected output to contain ANSI escape codes, got: %q", output)
 	}
 }
 
 /*
-TestPrintColored_TwoStringsWithColor verifies that calling PrintColored with a prefix, a secondary string,
-and a color attribute prints the prefix in the specified color and the secondary text in default formatting.
+TestPrintColored_TwoStringsWithColor verifies that calling PrintColored with a prefix, secondary string, and a color attribute
+prints the prefix in the specified color (high-intensity green) and the secondary text in default formatting.
 */
 func TestPrintColored_TwoStringsWithColor(t *testing.T) {
 	output := captureStdout(func() {
 		PrintColored("Prefix: ", "Value", color.FgHiGreen)
 	})
-	if !strings.Contains(output, "Prefix: ") {
-		t.Errorf("Expected output to contain %q, got: %q", "Prefix: ", output)
+	if !strings.Contains(output, "Prefix: ") || !strings.Contains(output, "Value") {
+		t.Errorf("Expected output to contain both 'Prefix: ' and 'Value', got: %q", output)
 	}
-	if !strings.Contains(output, "Value") {
-		t.Errorf("Expected output to contain %q, got: %q", "Value", output)
-	}
-	// Check for the ANSI escape code for high-intensity green (commonly "\x1b[92m").
+	// Check for ANSI escape code for high-intensity green (usually "\x1b[92m").
 	if !strings.Contains(output, "\x1b[92m") {
 		t.Errorf("Expected output to contain ANSI code for high-intensity green, got: %q", output)
 	}
 }
 
 /*
-TestPrintColored_DynamicUsage verifies that calling PrintColored with a []string as the first argument
-and a []color.Attribute as the second argument results in dynamic multi-segment printing.
-It ensures that each text segment is printed with the corresponding color, and if there are more text segments
-than colors, the last provided color is used.
+TestPrintColored_DynamicUsage verifies that calling PrintColored with a slice of strings and a slice of colors
+results in multi-segment printing. It ensures that each segment is printed in its corresponding color,
+and if there are more texts than colors, the last color is used for the remaining segments.
 */
 func TestPrintColored_DynamicUsage(t *testing.T) {
 	texts := []string{"Segment1 ", "Segment2 ", "Segment3"}
@@ -87,14 +84,12 @@ func TestPrintColored_DynamicUsage(t *testing.T) {
 	output := captureStdout(func() {
 		PrintColored(texts, colors)
 	})
-
-	// Verify that all text segments appear.
 	for _, segment := range texts {
 		if !strings.Contains(output, segment) {
 			t.Errorf("Expected output to contain %q, got: %q", segment, output)
 		}
 	}
-	// Verify that the ANSI codes for high-intensity green and magenta are present.
+	// Check for ANSI codes for high-intensity green and magenta.
 	if !strings.Contains(output, "\x1b[92m") {
 		t.Errorf("Expected output to contain ANSI code for high-intensity green, got: %q", output)
 	}
@@ -104,17 +99,15 @@ func TestPrintColored_DynamicUsage(t *testing.T) {
 }
 
 /*
-TestPrintColored_MixedArguments verifies that PrintColored can handle mixed argument types.
-It tests the function when provided with:
-  - A string prefix.
-  - A secondary string.
-  - A single color attribute.
-  - A slice of color attributes.
+TestPrintColored_MixedArguments verifies that PrintColored correctly handles mixed argument types.
+It tests:
+  - Individual string arguments with a single color attribute.
+  - Slices of strings with a slice of color attributes.
 
-For the latter case, the function should interpret the slice properly and print using the dynamic printing branch.
+In both cases, it checks that the output includes the appropriate ANSI escape codes.
 */
 func TestPrintColored_MixedArguments(t *testing.T) {
-	// Case 1: Using individual arguments.
+	// Case 1: Individual arguments.
 	output1 := captureStdout(func() {
 		PrintColored("Mixed1: ", "Value1", color.FgHiCyan)
 	})
