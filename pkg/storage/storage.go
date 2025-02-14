@@ -1,5 +1,4 @@
 // File: pkg/storage/storage.go
-
 package storage
 
 // StorageOption enumerates the types of storage we might support.

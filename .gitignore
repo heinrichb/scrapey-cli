@@ -1,5 +1,4 @@
 # File: .gitignore
-
 # Go binaries for programs and plugins
 *.exe
 *.exe~

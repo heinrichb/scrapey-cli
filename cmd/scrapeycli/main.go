@@ -1,3 +1,4 @@
+// File: cmd/scrapeycli/main.go
 package main
 
 import (

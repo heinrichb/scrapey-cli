@@ -1,5 +1,4 @@
 // File: cmd/scrapeycli/main_test.go
-
 package main
 
 import (

@@ -1,5 +1,4 @@
 # File: Makefile
-
 .PHONY: build run test
 
 build:

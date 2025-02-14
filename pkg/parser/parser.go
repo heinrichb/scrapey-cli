@@ -1,5 +1,4 @@
 // File: pkg/parser/parser.go
-
 package parser
 
 // ParseHTML analyzes HTML content and extracts data based on config or rules.
