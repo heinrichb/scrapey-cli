@@ -72,34 +72,36 @@ Scrapey CLI is a lightweight, configurable web crawler and scraper. It collects 
 
 ```
 scrapey-cli/
-├── .github/                 # GitHub-specific configurations
+├── .github/
 │   └── workflows/
-│       └── ci.yml           # GitHub Actions CI/CD pipeline configuration
-├── .vscode/                 # VS Code settings
-│   └── settings.json        # Editor settings (format on save for Go)
-├── build/                   # Build scripts, Dockerfiles, etc.
+│       └── ci.yml
+├── .vscode/
+│   └── settings.json        # VS Code settings (format on save for Go)
 ├── cmd/
-│   └── scrapeycli/          # CLI application entry point
-│       └── main.go          # Main Go file for Scrapey CLI
+│   └── scrapeycli/
+│       └── main.go
 ├── configs/
 │   └── default.json         # Default/example configuration file
 ├── docs/                    # Project documentation
-├── pkg/                     # Public packages for external use
+├── pkg/
 │   ├── config/
-│   │   └── config.go        # Config loading logic (stubbed)
+│   │   └── config.go        # Config loading logic
 │   ├── crawler/
-│   │   └── crawler.go       # Core web crawling logic (stubbed)
+│   │   └── crawler.go       # Core web crawling logic
 │   ├── parser/
-│   │   └── parser.go        # HTML parsing logic (stubbed)
-│   └── storage/
-│       └── storage.go       # Storage logic (stubbed for JSON and others)
+│   │   └── parser.go        # HTML parsing logic
+│   ├── storage/
+│   │   └── storage.go       # Storage logic
+│   └── utils/
+│       └── utils.go         # Utility functions
 ├── test/                    # Optional integration tests
-├── .gitignore               # Git ignore file
+├── .gitignore
 ├── LICENSE                  # MIT License file
-├── Makefile                 # Build & run script for CLI
-├── go.mod                   # Go module file
-├── go.sum                   # Go module checksum file
-└── README.md                # Project README
+├── Makefile                 # Build & run script for CLI (includes targets for build, run, and test)
+├── go.mod
+├── go.sum
+└── README.md
+
 ```
 
 ---
