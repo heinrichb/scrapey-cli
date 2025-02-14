@@ -1,3 +1,5 @@
+<!-- File: README.md -->
+
 # ✨ Scrapey CLI
 
 [![Build & Test](https://github.com/heinrichb/scrapey-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/heinrichb/scrapey-cli/actions/workflows/ci.yml)
@@ -10,31 +12,67 @@ Scrapey CLI is a lightweight, configurable web crawler and scraper. It collects 
 
 ## 🚀 Features
 
-- Lightweight and modular CLI interface
-- Configurable input (`.json` config file or command-line flags)
-- Extensible parsing logic for targeted HTML elements
-- Future support for multiple storage options (JSON, XML, Excel, MongoDB, MySQL)
-- DRY and clean code principles
+- **Lightweight & Modular CLI:** Built with clean, DRY code principles.
+- **Configurable Input:** Accepts configuration via a JSON file or command-line flags.
+- **Extensible Parsing:** Customizable HTML parsing logic.
+- **Planned Storage Options:** Future support for multiple output formats including JSON, XML, Excel, MongoDB, MySQL.
 
 ---
 
 ## 🌱 Getting Started
 
-1. **Clone the repo**:
-   git clone https://github.com/heinrichb/scrapey-cli.git
+1.  **Clone the Repo**
 
-2. **Initialize Go modules**:
-   cd scrapey-cli
-   go mod tidy
+    ```
+    git clone https://github.com/heinrichb/scrapey-cli.git
+    ```
 
-3. **Build the CLI**:  
-   Use the provided Makefile to build the binary into the `build` folder:
-   make build
-   Alternatively, you can run:
-   go build -o build/scrapeycli ./cmd/scrapeycli
+2.  **Initialize Go Modules & Build the CLI**
 
-4. **Run**:
-   ./build/scrapeycli --config configs/default.json
+    - **Option 1:** Using the Makefile (recommended)
+
+      ```
+      make build
+      ```
+
+      - This command runs `go mod tidy` and then builds the binary into the `build` folder.
+
+    - **Option 2:** Directly via Go
+
+      ```
+      go mod tidy
+      go build -o build/scrapeycli ./cmd/scrapeycli
+      ```
+
+3.  **Run the CLI**
+
+    - **Direct Execution:**
+      ```
+      ./build/scrapeycli --config configs/default.json
+      ```
+    - **Using the Makefile:**
+      The Makefile provides a `run` target which allows you to pass in optional variables:
+    - **Default Run:**
+
+      ```
+      make run
+      ```
+
+      | This uses the default configuration file (`configs/default.json`).
+
+    - **Override Config:**
+      ```
+      make run CONFIG=configs/other.json
+      ```
+    - **Pass a URL:**
+      ```
+      make run URL=https://example.org
+      ```
+    - **Combined:**
+
+      ```
+      make run CONFIG=configs/other.json URL=https://example.org
+      ```
 
 ---
 
@@ -66,7 +104,7 @@ scrapey-cli/
 ├── test/                    # Optional integration tests
 ├── .gitignore               # Git ignore file
 ├── LICENSE                  # MIT License file
-├── Makefile                 # Build script to output binary into build folder
+├── Makefile                 # Build & run script for CLI
 ├── go.mod                   # Go module file
 ├── go.sum                   # Go module checksum file
 └── README.md                # Project README
@@ -76,43 +114,71 @@ scrapey-cli/
 
 ## 🛠 Usage
 
-- **Basic**:
+- **Basic Execution:**
+  ```
   ./build/scrapeycli --url https://example.com
-
-- **With config file**:
+  ```
+- **With a Config File:**
+  ```
   ./build/scrapeycli --config configs/default.json
+  ```
+- **Using the Makefile:**
 
-- **Future**:
-  - Save data to JSON
-  - Multiple URLs at once
-  - Concurrency and rate-limiting
+  - Run with defaults:
+
+    ```
+    make run
+    ```
+
+  - Override configuration and/or URL:
+
+    ```
+    make run CONFIG=configs/other.json URL=https://example.org
+    ```
+
+- **Future Enhancements:**
+  - Save scraped data to JSON.
+  - Support for scraping multiple URLs simultaneously.
+  - Concurrency and rate-limiting.
 
 ---
 
 ## 🧪 Tests
 
-- Run unit tests locally:
-  go test ./...
+- **Run Unit Tests Locally:**
 
-- Automated tests on GitHub Actions:
-  - Triggered on every push and pull request to main or develop branches.
+  ```
+  go test ./...
+  ```
+
+- **Automated Tests on GitHub Actions:**
+  - Tests are triggered on every push and pull request to the `main` or `develop` branches.
   - See Build & Test (https://github.com/heinrichb/scrapey-cli/actions) for logs and results.
 
 ---
 
 ## 🤝 Contributing
 
-1. Fork the project
-2. Create your feature branch (git checkout -b feature/amazing-feature)
-3. Commit your changes (git commit -m 'Add some amazing feature')
-4. Push to the branch (git push origin feature/amazing-feature)
-5. Open a Pull Request
+1. Fork the project.
+2. Create your feature branch:
+   ```
+   git checkout -b feature/amazing-feature
+   ```
+3. Commit your changes:
+   ```
+   git commit -m 'Add some amazing feature'
+   ```
+4. Push to the branch:
+   ```
+   git push origin feature/amazing-feature
+   ```
+5. Open a Pull Request.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License (LICENSE).
+This project is licensed under the MIT License ([LICENSE](LICENSE)).
 
 ---
 

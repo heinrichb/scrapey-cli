@@ -35,8 +35,6 @@ func main() {
 		configPath = "configs/default.json"
 	}
 
-	// Show a colored message for loading config
-	fmt.Printf("%s%s\n", color.New(color.FgHiYellow).Sprint("Loading config from: "), configPath)
 	// Attempt to load config
 	cfg, err := config.Load(configPath)
 	if err != nil {

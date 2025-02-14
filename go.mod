@@ -1,3 +1,5 @@
+// File: go.mod
+
 module github.com/heinrichb/scrapey-cli
 
 go 1.23.4
