@@ -3,10 +3,12 @@
 package utils
 
 import (
-    "fmt"
-    "github.com/fatih/color"
-    "reflect"
+	"fmt"
+	"reflect"
+
+	"github.com/fatih/color"
 )
+
 // PrintNonEmptyFields dynamically traverses a struct and prints its non-empty string fields.
 //
 // Parameters:
@@ -19,15 +21,18 @@ import (
 //
 // Example:
 // Given a struct:
-//   type Config struct {
-//       URL string
-//       Nested struct {
-//           Title string
-//       }
-//   }
+//
+//	type Config struct {
+//	    URL string
+//	    Nested struct {
+//	        Title string
+//	    }
+//	}
+//
 // Calling PrintNonEmptyFields("", configInstance) will output:
-//   URL: http://example.com
-//   Nested.Title: Example Title
+//
+//	URL: http://example.com
+//	Nested.Title: Example Title
 //
 // Notes:
 // - This function relies on the reflect package and assumes that the input is a struct or a pointer to a struct.

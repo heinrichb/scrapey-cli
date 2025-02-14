@@ -3,8 +3,8 @@
 # ✨ Scrapey CLI
 
 [![Build & Test](https://github.com/heinrichb/scrapey-cli/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/heinrichb/scrapey-cli/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/heinrichb/scrapey-cli/branch/develop/graph/badge.svg?token=P45PASDIKF)](https://codecov.io/gh/heinrichb/scrapey-cli)
 [![Go Reference](https://pkg.go.dev/badge/github.com/heinrichb/scrapey-cli.svg)](https://pkg.go.dev/github.com/heinrichb/scrapey-cli)
-[![codecov](https://codecov.io/gh/heinrichb/scrapey-cli/graph/badge.svg?token=P45PASDIKF)](https://codecov.io/gh/heinrichb/scrapey-cli)
 
 Scrapey CLI is a lightweight, configurable web crawler and scraper. It collects data from websites based on rules defined in a config file. It can handle HTML parsing, data extraction, and plans to offer multiple storage options (JSON, XML, Excel, databases, etc.).
 

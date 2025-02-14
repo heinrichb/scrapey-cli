@@ -1,4 +1,5 @@
 # File: Makefile
+
 .PHONY: build run test
 
 # The binary target depends on all .go files, go.mod, and go.sum.

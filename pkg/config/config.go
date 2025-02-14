@@ -4,16 +4,17 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/fatih/color"
 	"github.com/heinrichb/scrapey-cli/pkg/utils"
-	"os"
 )
 
 // Config holds configuration data.
 type Config struct {
 	URL        string `json:"url,omitempty"`
 	PARSERULES struct {
-		TITLE string `json:"title,omitempty"`
+		TITLE           string `json:"title,omitempty"`
 		METADESCRIPTION string `json:"metaDescription,omitempty"`
 	}
 }
@@ -39,5 +40,5 @@ func Load(filePath string) (*Config, error) {
 		return nil, fmt.Errorf("invalid JSON in config file: %v", err)
 	}
 	utils.PrintNonEmptyFields("", cfg)
-    return &cfg, nil
+	return &cfg, nil
 }
