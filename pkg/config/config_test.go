@@ -1,4 +1,5 @@
 // File: pkg/config/config_test.go
+
 package config
 
 import (
@@ -6,9 +7,11 @@ import (
 	"testing"
 )
 
-// TestLoadValidConfig creates a temporary file containing valid JSON configuration data,
-// writes a valid URL value, and then attempts to load the configuration using Load.
-// The test verifies that the returned Config object contains the expected URL.
+/*
+TestLoadValidConfig creates a temporary file with valid JSON configuration data, writes a valid URL value,
+and attempts to load the configuration using Load. It verifies that the returned Config object contains the
+expected URL.
+*/
 func TestLoadValidConfig(t *testing.T) {
 	// Create a temporary file with valid JSON using os.CreateTemp.
 	tmpFile, err := os.CreateTemp("", "valid_config_*.json")
@@ -35,8 +38,10 @@ func TestLoadValidConfig(t *testing.T) {
 	}
 }
 
-// TestLoadNonexistentFile attempts to load a configuration from a file path that does not exist,
-// and verifies that Load returns an error.
+/*
+TestLoadNonexistentFile attempts to load a configuration from a non-existent file and verifies that
+Load returns an error.
+*/
 func TestLoadNonexistentFile(t *testing.T) {
 	// Attempt to load a config from a non-existent file.
 	_, err := Load("nonexistent_file.json")
@@ -45,8 +50,10 @@ func TestLoadNonexistentFile(t *testing.T) {
 	}
 }
 
-// TestLoadInvalidJSON creates a temporary file with invalid JSON content,
-// then attempts to load the configuration. The test confirms that an error is returned due to invalid JSON.
+/*
+TestLoadInvalidJSON creates a temporary file with invalid JSON content (missing a closing brace) and attempts
+to load the configuration. The test confirms that an error is returned due to invalid JSON.
+*/
 func TestLoadInvalidJSON(t *testing.T) {
 	// Create a temporary file with invalid JSON using os.CreateTemp.
 	tmpFile, err := os.CreateTemp("", "invalid_config_*.json")
@@ -55,7 +62,6 @@ func TestLoadInvalidJSON(t *testing.T) {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	// Write invalid JSON (missing closing brace) into the temporary file.
 	invalidJSON := `{"url": "http://example.org"`
 	if _, err := tmpFile.Write([]byte(invalidJSON)); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)

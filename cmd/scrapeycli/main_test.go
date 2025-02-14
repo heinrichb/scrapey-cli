@@ -1,4 +1,5 @@
 // File: cmd/scrapeycli/main_test.go
+
 package main
 
 import (
@@ -8,9 +9,19 @@ import (
 	"testing"
 )
 
-// runMainCommand is a helper function that executes main.go with the provided arguments.
-// It sets the working directory to the project root (two levels up from cmd/scrapeycli/)
-// and returns the combined output along with any error.
+/*
+runMainCommand is a helper function that executes main.go with the provided arguments.
+It sets the working directory to the project root (two levels up from cmd/scrapeycli/)
+and returns the combined output along with any error.
+
+Parameters:
+  - t: The current testing context (not used directly, but conforms to typical test helper function signatures).
+  - args: A variadic list of arguments to be passed to the go run command.
+
+Usage:
+
+	output, err := runMainCommand(t, "--config", "configs/default.json")
+*/
 func runMainCommand(_ *testing.T, args ...string) (string, error) {
 	cmd := exec.Command("go", append([]string{"run", "./cmd/scrapeycli/main.go"}, args...)...)
 	cmd.Dir = "../.." // Set working directory to project root.
@@ -18,8 +29,14 @@ func runMainCommand(_ *testing.T, args ...string) (string, error) {
 	return string(output), err
 }
 
-// This test verifies that all necessary command-line flags are properly registered.
-// The application depends on these flags to receive configuration input and URL overrides.
+/*
+TestFlagRegistration verifies that all necessary command-line flags are properly registered.
+The application depends on these flags for configuration input and URL overrides.
+
+Checks:
+  - "config" and "c" flags
+  - "url" flag
+*/
 func TestFlagRegistration(t *testing.T) {
 	if f := flag.Lookup("config"); f == nil {
 		t.Error("Expected flag 'config' to be registered")
@@ -32,8 +49,10 @@ func TestFlagRegistration(t *testing.T) {
 	}
 }
 
-// This test executes the main program with a valid configuration file.
-// It verifies that the program initializes correctly by checking for the welcome message in the output.
+/*
+TestMainExecution runs the main program with a valid configuration file and checks for
+the welcome message ("Welcome to Scrapey CLI!") in the output.
+*/
 func TestMainExecution(t *testing.T) {
 	output, err := runMainCommand(t, "--config", "configs/default.json")
 	if err != nil {
@@ -45,15 +64,16 @@ func TestMainExecution(t *testing.T) {
 	}
 }
 
-// This test simulates a configuration load failure by providing a non-existent config file.
-// It confirms that the program correctly handles the error by exiting with a status code of 1.
+/*
+TestMainConfigFailure simulates a config load failure by specifying a non-existent file.
+It checks that the program exits with code 1, indicating proper error handling.
+*/
 func TestMainConfigFailure(t *testing.T) {
 	_, err := runMainCommand(t, "--config", "nonexistent.json")
 	if err == nil {
 		t.Fatalf("Expected failure due to config load error, but got success")
 	}
 
-	// Verify that the error is of type *exec.ExitError and that the exit code is 1.
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		if exitErr.ExitCode() != 1 {
 			t.Errorf("Expected exit code 1, got %d", exitErr.ExitCode())
@@ -63,9 +83,11 @@ func TestMainConfigFailure(t *testing.T) {
 	}
 }
 
-// This test runs the main program with both a valid configuration file and a URL override parameter.
-// It checks that the output includes the URL override message and that the overridden URL is displayed,
-// confirming that the URL override branch in the code is executed.
+/*
+TestURLOverride runs the main program with a valid config file and a URL override flag.
+It verifies that the output includes the URL override message and that the overridden
+URL is displayed, confirming the override branch is executed.
+*/
 func TestURLOverride(t *testing.T) {
 	output, err := runMainCommand(t, "--config", "configs/default.json", "--url", "https://example.org")
 	if err != nil {

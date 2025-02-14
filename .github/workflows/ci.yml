@@ -1,4 +1,5 @@
 # File: .github/workflows/ci.yml
+
 name: CI
 
 on:
@@ -20,6 +21,14 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: "1.23"
+
+      - name: 📦 Check go.sum consistency
+        run: |
+          go mod tidy
+          if ! git diff --exit-code go.sum; then
+            echo "go.sum is not up-to-date. Please run 'go mod tidy' and commit the changes."
+            exit 1
+          fi
 
       - name: 🛠️ Build
         run: go build ./...
