@@ -23,56 +23,48 @@ Scrapey CLI is a lightweight, configurable web crawler and scraper. It collects 
 
 1.  **Clone the Repo**
 
-    ```
-    git clone https://github.com/heinrichb/scrapey-cli.git
-    ```
+        git clone https://github.com/heinrichb/scrapey-cli.git
 
 2.  **Initialize Go Modules & Build the CLI**
 
     - **Option 1:** Using the Makefile (recommended)
 
-      ```
-      make build
-      ```
+          make build
 
       - This command runs `go mod tidy` and then builds the binary into the `build` folder.
 
     - **Option 2:** Directly via Go
 
-      ```
-      go mod tidy
-      go build -o build/scrapeycli ./cmd/scrapeycli
-      ```
+          go mod tidy
+          go build -o build/scrapeycli ./cmd/scrapeycli
 
 3.  **Run the CLI**
 
     - **Direct Execution:**
-      ```
-      ./build/scrapeycli --config configs/default.json
-      ```
+
+          ./build/scrapeycli --config configs/default.json
+
     - **Using the Makefile:**
+
       The Makefile provides a `run` target which allows you to pass in optional variables:
+
     - **Default Run:**
 
-      ```
-      make run
-      ```
+          make run
 
-      | This uses the default configuration file (`configs/default.json`).
+      - This uses the default configuration file (`configs/default.json`).
 
     - **Override Config:**
-      ```
-      make run CONFIG=configs/other.json
-      ```
+
+          make run CONFIG=configs/other.json
+
     - **Pass a URL:**
-      ```
-      make run URL=https://example.org
-      ```
+
+          make run URL=https://example.org
+
     - **Combined:**
 
-      ```
-      make run CONFIG=configs/other.json URL=https://example.org
-      ```
+          make run CONFIG=configs/other.json URL=https://example.org
 
 ---
 
@@ -115,26 +107,22 @@ scrapey-cli/
 ## 🛠 Usage
 
 - **Basic Execution:**
-  ```
-  ./build/scrapeycli --url https://example.com
-  ```
+
+      ./build/scrapeycli --url https://example.com
+
 - **With a Config File:**
-  ```
-  ./build/scrapeycli --config configs/default.json
-  ```
+
+      ./build/scrapeycli --config configs/default.json
+
 - **Using the Makefile:**
 
   - Run with defaults:
 
-    ```
-    make run
-    ```
+        make run
 
   - Override configuration and/or URL:
 
-    ```
-    make run CONFIG=configs/other.json URL=https://example.org
-    ```
+        make run CONFIG=configs/other.json URL=https://example.org
 
 - **Future Enhancements:**
   - Save scraped data to JSON.
@@ -146,33 +134,34 @@ scrapey-cli/
 ## 🧪 Tests
 
 - **Run Unit Tests Locally:**
+  To run tests for all modules and the test folder (if it exists), use:
 
-  ```
-  go test ./...
-  ```
+      make test
+
+  This command first runs "go test ./..." to execute tests in all packages, and then, if the "test" folder exists and contains Go files, it will run tests in that folder as well.
 
 - **Automated Tests on GitHub Actions:**
-  - Tests are triggered on every push and pull request to the `main` or `develop` branches.
+  - Tests are triggered on every push and pull request to the "main" or "develop" branches.
   - See Build & Test (https://github.com/heinrichb/scrapey-cli/actions) for logs and results.
 
 ---
 
 ## 🤝 Contributing
 
-1. Fork the project.
-2. Create your feature branch:
-   ```
-   git checkout -b feature/amazing-feature
-   ```
-3. Commit your changes:
-   ```
-   git commit -m 'Add some amazing feature'
-   ```
-4. Push to the branch:
-   ```
-   git push origin feature/amazing-feature
-   ```
-5. Open a Pull Request.
+1.  Fork the project.
+2.  Create your feature branch:
+
+        git checkout -b feature/amazing-feature
+
+3.  Commit your changes:
+
+        git commit -m 'Add some amazing feature'
+
+4.  Push to the branch:
+
+        git push origin feature/amazing-feature
+
+5.  Open a Pull Request.
 
 ---
 
