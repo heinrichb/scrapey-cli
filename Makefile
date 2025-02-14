@@ -20,4 +20,7 @@ run:
 	./build/scrapeycli $(CONFIG_FLAG) $(URL_FLAG)
 
 test:
-	go test ./...
+	@go test ./...
+	@if [ -d test ] && ls test/*.go > /dev/null 2>&1; then \
+	    go test ./test; \
+	fi
