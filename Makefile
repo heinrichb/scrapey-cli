@@ -128,7 +128,8 @@ test: $(TEST_STAMP)
 # ------------------------------------------------------------------------------
 coverage: $(TEST_STAMP)
 	@echo "================== COVERAGE SUMMARY =================="
-	go tool cover -func="$(COVER_PROFILE)"
+	go tool cover -func="$(COVER_PROFILE)" \
+	  | go run ./scripts/coverage_formatter.go
 	@echo "====================================================="
 
 # ------------------------------------------------------------------------------
