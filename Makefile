@@ -30,50 +30,45 @@ GO_FILES        := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 # Reusable messages
 SKIP_MSG        := No changes detected, skipping
-CHANGE_MSG      := Changes detected
+CHANGE_MSG      := $(SKIP_MSG:No changes detected, skipping=Some files changed; re-running)
 
 # ------------------------------------------------------------------------------
-# install: Ensure go.mod/go.sum are tidy.
-# This target always runs its recipe (via a phony dependency) and prints either
-# "Changes detected, running 'go mod tidy' for install..." or "No changes detected, skipping install."
+# install: ensure go.mod/go.sum are tidy if changed.
+# Always run this recipe to print a message.
 # ------------------------------------------------------------------------------
-install: $(INSTALL_STAMP)
-
-$(INSTALL_STAMP): go.mod go.sum
+install:
 	@mkdir -p $(STAMPS_DIR)
 	@TARGET=install; \
-	if [ ! -f "$@" ] || [ go.mod -nt "$@" ] || [ go.sum -nt "$@" ]; then \
-		echo "$(CHANGE_MSG), running 'go mod tidy' for $$TARGET..."; \
+	if [ ! -f "$(INSTALL_STAMP)" ] || [ go.mod -nt "$(INSTALL_STAMP)" ] || [ go.sum -nt "$(INSTALL_STAMP)" ]; then \
+		echo "$(CHANGE_MSG) $$TARGET..."; \
 		go mod tidy; \
 		if ! git diff --exit-code go.sum; then \
 			echo "go.sum updated. Please commit the changes."; \
 			exit 1; \
 		fi; \
-		touch "$@"; \
+		touch "$(INSTALL_STAMP)"; \
 		echo "Done with 'make $$TARGET'."; \
 	else \
 		echo "$(SKIP_MSG) $$TARGET."; \
 	fi
 
 # ------------------------------------------------------------------------------
-# build: Rebuild binary if any .go file or go.mod/go.sum changed.
+# build: recompile binary if any .go, go.mod, or go.sum changed.
 # ------------------------------------------------------------------------------
-build: $(BUILD_STAMP)
-
-$(BUILD_STAMP): $(INSTALL_STAMP) $(GO_FILES) go.mod go.sum
+build:
 	@mkdir -p $(BUILD_DIR) $(STAMPS_DIR)
 	@TARGET=build; \
-	if [ ! -f "$@" ] || [ -n "$$(find . -name '*.go' -newer "$@")" ] || [ go.mod -nt "$@" ] || [ go.sum -nt "$@" ]; then \
-		echo "$(CHANGE_MSG), rebuilding $$TARGET..."; \
+	if [ ! -f "$(BUILD_STAMP)" ] || [ -n "$$(find . -name '*.go' -newer "$(BUILD_STAMP)")" ] || [ go.mod -nt "$(BUILD_STAMP)" ] || [ go.sum -nt "$(BUILD_STAMP)" ]; then \
+		echo "$(CHANGE_MSG) $$TARGET..."; \
 		go build -o "$(BINARY)" ./cmd/scrapeycli; \
-		touch "$@"; \
+		touch "$(BUILD_STAMP)"; \
 		echo "Done with 'make $$TARGET'."; \
 	else \
 		echo "$(SKIP_MSG) $$TARGET."; \
 	fi
 
 # ------------------------------------------------------------------------------
-# run: Execute the compiled binary.
+# run: executes the compiled binary.
 # ------------------------------------------------------------------------------
 CONFIG_FLAG =
 ifdef CONFIG
@@ -87,7 +82,7 @@ run: build
 	@./$(BINARY) $(CONFIG_FLAG) $(URL_FLAG)
 
 # ------------------------------------------------------------------------------
-# ensure-gotestsum: Installs gotestsum if missing.
+# ensure-gotestsum: installs gotestsum if missing.
 # ------------------------------------------------------------------------------
 ensure-gotestsum:
 	@if ! command -v gotestsum >/dev/null 2>&1; then \
@@ -96,38 +91,42 @@ ensure-gotestsum:
 	fi
 
 # ------------------------------------------------------------------------------
-# test: Run tests (and update coverage) if any Go files (including _test.go) have changed.
+# test: run tests and update coverage if any Go source (including _test.go files) have changed.
+# Only run tests if changes are detected; otherwise, print skip message.
 # ------------------------------------------------------------------------------
-test: $(TEST_STAMP)
-
-$(TEST_STAMP): ensure-gotestsum
+test:
 	@mkdir -p $(COVER_DIR) $(STAMPS_DIR)
 	@TARGET=test; \
-	if [ ! -f "$@" ]; then \
+	if [ ! -f "$(TEST_STAMP)" ]; then \
 		echo "No $$TARGET stamp found; running $$TARGET..."; \
 		$(MAKE) --no-print-directory do-coverage-run; \
-	elif [ -n "$$(find $(GO_FILES) go.mod go.sum -type f -newer "$@" 2>/dev/null)" ]; then \
-		echo "Some files changed; re-running $$TARGET..."; \
+		echo "Done with 'make $$TARGET'."; \
+	elif [ -n "$$(find $(GO_FILES) go.mod go.sum -type f -newer "$(TEST_STAMP)" 2>/dev/null)" ]; then \
+		echo "$(CHANGE_MSG) $$TARGET..."; \
 		$(MAKE) --no-print-directory do-coverage-run; \
+		echo "Done with 'make $$TARGET'."; \
 	else \
 		echo "$(SKIP_MSG) $$TARGET."; \
 	fi
 
 .PHONY: do-coverage-run
 do-coverage-run:
-	gotestsum --format short-verbose ./... -- -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)"
+	gotestsum --format short-verbose ./... -- \
+	  -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)"
 	@if [ -d test ] && ls test/*.go >/dev/null 2>&1; then \
 		echo "Merging coverage from ./test directory..."; \
-		gotestsum --format short-verbose ./test -- -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)" -append; \
+		gotestsum --format short-verbose ./test -- \
+		  -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)" -append; \
 	else \
 		echo "Skipping ./test folder (no Go files found)."; \
 	fi
 	go tool cover -html="$(COVER_PROFILE)" -o "$(COVER_HTML)"
 	touch "$(TEST_STAMP)"
-	echo "Done with 'make test'."
+	@echo "Tests complete. Coverage file generated at: $(COVER_PROFILE)"
+	@echo "HTML coverage report at: $(COVER_HTML)"
 
 # ------------------------------------------------------------------------------
-# coverage: Display a colorized coverage summary.
+# coverage: displays a colorized coverage summary from the coverage file.
 # ------------------------------------------------------------------------------
 coverage: test
 	@echo "================== COVERAGE SUMMARY =================="
@@ -135,7 +134,7 @@ coverage: test
 	@echo "====================================================="
 
 # ------------------------------------------------------------------------------
-# tree: Display directory structure (installs tree if missing)
+# tree: displays directory structure (installs tree if missing).
 # ------------------------------------------------------------------------------
 tree:
 	@if ! command -v tree >/dev/null 2>&1; then \
