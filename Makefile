@@ -1,5 +1,5 @@
 # File: Makefile
-.PHONY: build run
+.PHONY: build run test
 
 # The binary target depends on all .go files, go.mod, and go.sum.
 # The find command collects all Go files in the project.
@@ -12,7 +12,6 @@ build: $(shell find . -name '*.go') go.mod go.sum
 	else \
 		echo "No changes detected, skipping rebuild."; \
 	fi
-
 
 CONFIG_FLAG =
 ifdef CONFIG
@@ -28,7 +27,7 @@ run: build
 	./build/scrapeycli $(CONFIG_FLAG) $(URL_FLAG)
 
 test:
-	@go test ./...
+	go test ./... -coverprofile=./coverage/coverage.txt
 	@if [ -d test ] && ls test/*.go > /dev/null 2>&1; then \
-	    go test ./test; \
+	    go test ./test -coverprofile=./coverage/coverage.txt; \
 	fi
