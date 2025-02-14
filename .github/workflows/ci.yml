@@ -1,6 +1,6 @@
 # File: .github/workflows/ci.yml
 
-name: CI
+name: Continuous Integration (CI)
 
 on:
   push:
