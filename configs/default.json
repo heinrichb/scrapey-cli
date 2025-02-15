@@ -1,5 +1,5 @@
 {
-	"url": "https://MyExample.com",
+	"url": "https://google.com",
 	"parseRules": {
 		"title": "My Example App",
 		"metaDescription": "meta[name='Example App Loading Config']"
