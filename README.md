@@ -76,32 +76,34 @@ scrapey-cli/
 │   └── workflows/
 │       └── ci.yml
 ├── .vscode/
-│   └── settings.json        # VS Code settings (format on save for Go)
+│   └── settings.json                 # VS Code settings (format on save for Go)
 ├── cmd/
 │   └── scrapeycli/
 │       └── main.go
 ├── configs/
-│   └── default.json         # Default/example configuration file
-├── docs/                    # Project documentation
+│   └── default.json                  # Default/example configuration file
 ├── pkg/
 │   ├── config/
-│   │   └── config.go        # Config loading logic
+│   │   └── config.go                 # Config loading logic
 │   ├── crawler/
-│   │   └── crawler.go       # Core web crawling logic
+│   │   └── crawler.go                # Core web crawling logic
 │   ├── parser/
-│   │   └── parser.go        # HTML parsing logic
+│   │   └── parser.go                 # HTML parsing logic
 │   ├── storage/
-│   │   └── storage.go       # Storage logic
+│   │   └── storage.go                # Storage logic
 │   └── utils/
-│       └── utils.go         # Utility functions
-├── test/                    # Optional integration tests
+│       ├── printcolor.go             # Colorized terminal output utility
+│       └── utils.go                  # Utility functions
+├── scripts/
+│   └── coverage_formatter.go         # Formats and colorizes Go test coverage output
+├── test/                             # Optional integration tests
+│   └── fail_test.go                  # Test case designed to always fail, used to debug test output
 ├── .gitignore
-├── LICENSE                  # MIT License file
-├── Makefile                 # Build & run script for CLI (includes targets for build, run, and test)
+├── LICENSE                           # MIT License file
+├── Makefile                          # Build & run script for CLI (includes targets for build, run, and test)
 ├── go.mod
 ├── go.sum
 └── README.md
-
 ```
 
 ---

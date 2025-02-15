@@ -1,3 +1,5 @@
+// File: test/fail_test.go
+
 package main
 
 import (
