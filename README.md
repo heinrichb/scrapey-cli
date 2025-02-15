@@ -93,7 +93,7 @@ scrapey-cli/
 │   │   └── storage.go                # Storage logic
 │   └── utils/
 │       ├── printcolor.go             # Colorized terminal output utility
-│       └── utils.go                  # Utility functions
+│       └── printstruct.go            # Utility for printing non-empty struct fields
 ├── scripts/
 │   └── coverage_formatter.go         # Formats and colorizes Go test coverage output
 ├── test/                             # Optional integration tests

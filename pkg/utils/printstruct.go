@@ -1,4 +1,4 @@
-// File: pkg/utils/utils.go
+// File: pkg/utils/printstruct.go
 
 package utils
 
