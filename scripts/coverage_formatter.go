@@ -1,4 +1,5 @@
 // File: scripts/coverage_formatter.go
+
 package main
 
 import (

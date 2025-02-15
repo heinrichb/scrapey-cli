@@ -50,8 +50,7 @@ func TestFlagRegistration(t *testing.T) {
 }
 
 /*
-TestMainExecution runs the main program with a valid configuration file and checks for
-the welcome message ("Welcome to Scrapey CLI!") in the output.
+TestMainExecution runs the main program with a valid configuration file and checks for the expected output.
 */
 func TestMainExecution(t *testing.T) {
 	output, err := runMainCommand(t, "--config", "configs/default.json")
@@ -61,6 +60,10 @@ func TestMainExecution(t *testing.T) {
 
 	if !strings.Contains(output, "Welcome to Scrapey CLI!") {
 		t.Errorf("Expected welcome message not found in output.\nOutput: %s", output)
+	}
+
+	if !strings.Contains(output, "Base URL: https://example.com") {
+		t.Errorf("Expected base URL output not found.\nOutput: %s", output)
 	}
 }
 
@@ -84,9 +87,7 @@ func TestMainConfigFailure(t *testing.T) {
 }
 
 /*
-TestURLOverride runs the main program with a valid config file and a URL override flag.
-It verifies that the output includes the URL override message and that the overridden
-URL is displayed, confirming the override branch is executed.
+TestURLOverride verifies that specifying a URL via CLI correctly overrides the Base URL.
 */
 func TestURLOverride(t *testing.T) {
 	output, err := runMainCommand(t, "--config", "configs/default.json", "--url", "https://example.org")
@@ -96,7 +97,7 @@ func TestURLOverride(t *testing.T) {
 	if !strings.Contains(output, "Overriding config with URL flag:") {
 		t.Errorf("Expected URL override message not found in output.\nOutput: %s", output)
 	}
-	if !strings.Contains(output, "https://example.org") {
+	if !strings.Contains(output, "Base URL: https://example.org") {
 		t.Errorf("Expected overridden URL not found in output.\nOutput: %s", output)
 	}
 }

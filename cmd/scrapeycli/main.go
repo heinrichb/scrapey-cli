@@ -60,15 +60,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	// If a URL is provided via the command line, override the configuration's URL.
+	// If a URL is provided via the command line, override the configuration's base URL.
 	if url != "" {
 		utils.PrintColored("Overriding config with URL flag: ", url, color.FgHiMagenta)
-		cfg.URL = url
+		cfg.URL.Base = url
 	}
 
-	// Print a confirmation message in high-intensity green indicating successful config load.
+	// Print confirmation of loaded config.
 	utils.PrintColored("Loaded config from: ", configPath, color.FgHiGreen)
 
 	// Indicate that initialization is complete by printing a success message in green.
 	utils.PrintColored("Scrapey CLI initialization complete.", "", color.FgGreen)
+
+	// Print which routes will be scraped.
+	utils.PrintColored("Base URL: ", cfg.URL.Base, color.FgYellow)
+	if cfg.URL.IncludeBase {
+		utils.PrintColored("Including base URL in scraping.", "", color.FgGreen)
+	}
+	for _, route := range cfg.URL.Routes {
+		utils.PrintColored("Scraping route: ", route, color.FgHiBlue)
+	}
 }

@@ -15,21 +15,44 @@ import (
 Config holds configuration data used by Scrapey CLI.
 
 Fields:
-  - URL: The URL to be scraped.
-  - PARSERULES: A nested struct containing parsing rules.
-  - TITLE: The CSS selector for extracting the title.
-  - METADESCRIPTION: The CSS selector for extracting the meta description.
+  - URL: A struct containing the base URL and routes to scrape.
+  - ParseRules: A struct containing parsing rules.
+  - Storage: A struct defining how data is saved.
+  - ScrapingOptions: Settings for crawling behavior.
+  - DataFormatting: Options for cleaning extracted content.
 
 Usage:
 
 	The configuration is loaded from a JSON file to guide the crawler and parser.
 */
 type Config struct {
-	URL        string `json:"url,omitempty"`
-	PARSERULES struct {
-		TITLE           string `json:"title,omitempty"`
-		METADESCRIPTION string `json:"metaDescription,omitempty"`
-	} `json:"parseRules,omitempty"`
+	URL struct {
+		Base        string   `json:"base"`
+		Routes      []string `json:"routes"`
+		IncludeBase bool     `json:"includeBase"`
+	} `json:"url"`
+	ParseRules struct {
+		Title           string `json:"title,omitempty"`
+		MetaDescription string `json:"metaDescription,omitempty"`
+		ArticleContent  string `json:"articleContent,omitempty"`
+		Author          string `json:"author,omitempty"`
+		DatePublished   string `json:"datePublished,omitempty"`
+	} `json:"parseRules"`
+	Storage struct {
+		OutputFormats []string `json:"outputFormats"`
+		SavePath      string   `json:"savePath"`
+		FileName      string   `json:"fileName"`
+	} `json:"storage"`
+	ScrapingOptions struct {
+		MaxDepth      int     `json:"maxDepth"`
+		RateLimit     float64 `json:"rateLimit"`
+		RetryAttempts int     `json:"retryAttempts"`
+		UserAgent     string  `json:"userAgent"`
+	} `json:"scrapingOptions"`
+	DataFormatting struct {
+		CleanWhitespace bool `json:"cleanWhitespace"`
+		RemoveHTML      bool `json:"removeHTML"`
+	} `json:"dataFormatting"`
 }
 
 /*
