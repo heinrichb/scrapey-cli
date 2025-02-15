@@ -27,3 +27,7 @@ go.work.sum
 
 # Environment variables
 .env
+
+# Ignore all configs except default.json
+configs/*
+!configs/default.json

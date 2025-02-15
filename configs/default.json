@@ -1,7 +1,29 @@
 {
-	"url": "https://MyExample.com",
+	"url": {
+		"base": "https://example.com",
+		"routes": ["/route1", "/route2", "*"],
+		"includeBase": false
+	},
 	"parseRules": {
-		"title": "My Example App",
-		"metaDescription": "meta[name='Example App Loading Config']"
+		"title": "title",
+		"metaDescription": "meta[name='description']",
+		"articleContent": "article",
+		"author": ".author-name",
+		"datePublished": "meta[property='article:published_time']"
+	},
+	"storage": {
+		"outputFormats": ["json", "csv", "xml"],
+		"savePath": "output/",
+		"fileName": "scraped_data"
+	},
+	"scrapingOptions": {
+		"maxDepth": 2,
+		"rateLimit": 1.5,
+		"retryAttempts": 3,
+		"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+	},
+	"dataFormatting": {
+		"cleanWhitespace": true,
+		"removeHTML": true
 	}
 }

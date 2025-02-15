@@ -108,6 +108,92 @@ scrapey-cli/
 
 ---
 
+## 🔧 Configuration Options
+
+Scrapey CLI is configured using a JSON file that defines how websites are crawled and scraped. Below is a detailed breakdown of the available configuration options.
+
+### 🌍 URL Configuration
+
+```json
+"url": {
+  "base": "https://example.com",
+  "routes": [
+    "/route1",
+    "/route2",
+    "*"
+  ],
+  "includeBase": false
+}
+```
+
+- **base**: The primary domain to scrape.
+- **routes**: List of specific paths to scrape. Supports `*` as a wildcard for full site crawling.
+- **includeBase**: Whether to include the base URL in the scrape.
+
+### 🔍 Parsing Rules
+
+```json
+"parseRules": {
+  "title": "title",
+  "metaDescription": "meta[name='description']",
+  "articleContent": "article",
+  "author": ".author-name",
+  "datePublished": "meta[property='article:published_time']"
+}
+```
+
+- **title**: Extracts the page title.
+- **metaDescription**: Extracts the meta description.
+- **articleContent**: Defines the main article section.
+- **author**: Selector for extracting author names.
+- **datePublished**: Extracts the publication date from meta properties.
+
+### 💾 Storage Options
+
+```json
+"storage": {
+  "outputFormats": ["json", "csv", "xml"],
+  "savePath": "output/",
+  "fileName": "scraped_data"
+}
+```
+
+- **outputFormats**: List of formats in which data will be stored.
+- **savePath**: Directory where scraped content is saved.
+- **fileName**: Base name for output files.
+
+### ⚡ Scraping Behavior
+
+```json
+"scrapingOptions": {
+  "maxDepth": 2,
+  "rateLimit": 1.5,
+  "retryAttempts": 3,
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+}
+```
+
+- **maxDepth**: Defines how deep the scraper should follow links.
+- **rateLimit**: Time delay (in seconds) between requests to avoid rate-limiting.
+- **retryAttempts**: Number of retries for failed requests.
+- **userAgent**: Custom user-agent string to mimic a browser.
+
+### 🛠 Data Formatting
+
+```json
+"dataFormatting": {
+  "cleanWhitespace": true,
+  "removeHTML": true
+}
+```
+
+- **cleanWhitespace**: Removes unnecessary whitespace in extracted content.
+- **removeHTML**: Strips HTML tags from extracted content for cleaner output.
+
+This configuration file allows fine-tuning of scraping behavior, data extraction, and storage formats for ultimate flexibility in web scraping.
+
+---
+
 ## 🛠 Usage
 
 - **Basic Execution:**
