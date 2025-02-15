@@ -64,28 +64,23 @@ test: install
 	fi
 	@mkdir -p $(COVER_DIR) $(STAMPS_DIR)
 	@TARGET=test; \
-	if [ ! -f "$(TEST_STAMP)" ] || [ ! -f "$(COVER_PROFILE)" ] || [ ! -f "$(COVER_HTML)" ] || \
-	   [ -n "$$(find $(GO_FILES) -newer "$(TEST_STAMP)" 2>/dev/null)" ]; then \
+	if [ ! -f "$(TEST_STAMP)" ] || [ -n "$$(find $(GO_FILES) -newer "$(TEST_STAMP)" 2>/dev/null)" ]; then \
 		echo "$(CHANGE_MSG) $$TARGET..."; \
 		> "$(COVER_PROFILE)"; \
-		gotestsum --format short-verbose ./... -- \
-		  -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)"; \
-		if [ -d test ] && ls test/*.go >/dev/null 2>&1; then \
-			echo "Merging coverage from ./test directory..."; \
-			gotestsum --format short-verbose ./test -- \
-			  -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)" -append; \
+		if gotestsum --format short-verbose ./... && \
+		   go test -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)" ./... >/dev/null; then \
+			if [ -f "$(COVER_PROFILE)" ]; then \
+				go tool cover -html="$(COVER_PROFILE)" -o "$(COVER_HTML)"; \
+				echo "Coverage file generated at: $(COVER_PROFILE)"; \
+				echo "HTML coverage report at: $(COVER_HTML)"; \
+			else \
+				echo "ERROR: Coverage file was not generated!"; \
+			fi; \
+			touch "$(TEST_STAMP)"; \
 		else \
-			echo "Skipping ./test folder (no Go files found)."; \
+			echo "Tests failed! Skipping stamp update."; \
+			exit 1; \
 		fi; \
-		if [ -f "$(COVER_PROFILE)" ]; then \
-			go tool cover -html="$(COVER_PROFILE)" -o "$(COVER_HTML)"; \
-			echo "Coverage file generated at: $(COVER_PROFILE)"; \
-			echo "HTML coverage report at: $(COVER_HTML)"; \
-		else \
-			echo "ERROR: Coverage file was not generated!"; \
-		fi; \
-		ls -lah $(COVER_DIR); \
-		touch "$(TEST_STAMP)"; \
 	else \
 		echo "$(SKIP_MSG) $$TARGET."; \
 	fi
