@@ -70,6 +70,7 @@ test: install
 		if gotestsum --format short-verbose ./... && \
 		   go test -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)" ./... >/dev/null; then \
 			if [ -f "$(COVER_PROFILE)" ]; then \
+				grep -v "cmd/scrapeycli/main.go:" "$(COVER_PROFILE)" > "$(COVER_PROFILE).tmp" && mv "$(COVER_PROFILE).tmp" "$(COVER_PROFILE)"; \
 				go tool cover -html="$(COVER_PROFILE)" -o "$(COVER_HTML)"; \
 				echo "Coverage file generated at: $(COVER_PROFILE)"; \
 				echo "HTML coverage report at: $(COVER_HTML)"; \

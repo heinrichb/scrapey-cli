@@ -33,9 +33,9 @@ func captureStdout(f func()) string {
 	return buf.String()
 }
 
-// TestPrintColoredCombined exercises all branches of the PrintColored function in a table-driven test.
+// TestPrintColored exercises all branches of the PrintColored function in a table-driven test.
 // Each case is documented to explain what branch of PrintColored is being hit.
-func TestPrintColoredCombined(t *testing.T) {
+func TestPrintColored(t *testing.T) {
 	tests := []struct {
 		name string
 		args []interface{}
