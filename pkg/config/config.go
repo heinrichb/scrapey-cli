@@ -35,7 +35,8 @@ Usage:
 	The configuration is loaded from a JSON file to guide the crawler and parser.
 */
 type Config struct {
-	URL struct {
+	Version string `json:"version"`
+	URL     struct {
 		Base        string   `json:"base"`
 		Routes      []string `json:"routes"`
 		IncludeBase bool     `json:"includeBase"`
@@ -183,7 +184,7 @@ Notes:
   - Uses **reflection** to dynamically override values while maintaining type safety.
   - Since every top‑level field in Config is a struct, only that branch is executed.
 */
-func (cfg *Config) OverrideWithCLI(overrides Config) {
+func (cfg *Config) OverrideConfig(overrides Config) {
 	cfgValue := reflect.ValueOf(cfg).Elem()
 	overridesValue := reflect.ValueOf(overrides)
 
@@ -196,7 +197,7 @@ func (cfg *Config) OverrideWithCLI(overrides Config) {
 			continue
 		}
 
-		// Since all fields in Config are structs, we only need to handle that branch.
+		// If the override field is a struct, iterate over its subfields and apply every value (even if zero or empty).
 		if overrideField.Kind() == reflect.Struct {
 			for j := 0; j < overrideField.NumField(); j++ {
 				subField := overrideField.Type().Field(j)
@@ -207,17 +208,16 @@ func (cfg *Config) OverrideWithCLI(overrides Config) {
 					continue
 				}
 
-				// Skip empty slices.
-				if overrideSubField.Kind() == reflect.Slice && overrideSubField.Len() == 0 {
-					continue
-				}
-
-				if !overrideSubField.IsZero() {
-					utils.PrintColored(fmt.Sprintf("Overriding %s.%s: ", field.Name, subField.Name),
-						fmt.Sprint(overrideSubField.Interface()), color.FgHiMagenta)
-					configSubField.Set(overrideSubField)
-				}
+				// Always override the subfield value, regardless of its value.
+				utils.PrintColored(fmt.Sprintf("Overriding %s.%s: ", field.Name, subField.Name),
+					fmt.Sprint(overrideSubField.Interface()), color.FgHiMagenta)
+				configSubField.Set(overrideSubField)
 			}
+		} else {
+			// For non-struct fields, override unconditionally.
+			utils.PrintColored(fmt.Sprintf("Overriding %s: ", field.Name),
+				fmt.Sprint(overrideField.Interface()), color.FgHiMagenta)
+			configField.Set(overrideField)
 		}
 	}
 }

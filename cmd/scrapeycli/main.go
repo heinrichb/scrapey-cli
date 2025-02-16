@@ -94,7 +94,7 @@ func main() {
 	}
 
 	// Apply all CLI overrides dynamically.
-	cfg.OverrideWithCLI(cliOverrides)
+	cfg.OverrideConfig(cliOverrides)
 
 	// Print confirmation of loaded config.
 	utils.PrintColored("Scrapey CLI initialization complete.", "", color.FgGreen)
