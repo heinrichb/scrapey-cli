@@ -29,7 +29,6 @@ Fields:
   - Storage: A struct defining how data is saved.
   - ScrapingOptions: Settings for crawling behavior.
   - DataFormatting: Options for cleaning extracted content.
-  - TestDummy: A dummy non-struct field added solely to exercise the else branch in OverrideWithCLI.
 
 Usage:
 
@@ -63,8 +62,6 @@ type Config struct {
 		CleanWhitespace bool `json:"cleanWhitespace"`
 		RemoveHTML      bool `json:"removeHTML"`
 	} `json:"dataFormatting"`
-	// TestDummy is a dummy non-struct field added solely to exercise the else branch in OverrideWithCLI.
-	TestDummy int `json:"testDummy,omitempty"`
 }
 
 /*
@@ -184,6 +181,7 @@ Usage:
 Notes:
   - Only **non-zero** values in `overrides` are applied.
   - Uses **reflection** to dynamically override values while maintaining type safety.
+  - Since every top‑level field in Config is a struct, only that branch is executed.
 */
 func (cfg *Config) OverrideWithCLI(overrides Config) {
 	cfgValue := reflect.ValueOf(cfg).Elem()
@@ -198,6 +196,7 @@ func (cfg *Config) OverrideWithCLI(overrides Config) {
 			continue
 		}
 
+		// Since all fields in Config are structs, we only need to handle that branch.
 		if overrideField.Kind() == reflect.Struct {
 			for j := 0; j < overrideField.NumField(); j++ {
 				subField := overrideField.Type().Field(j)
@@ -208,25 +207,16 @@ func (cfg *Config) OverrideWithCLI(overrides Config) {
 					continue
 				}
 
-				// **Skip empty slices**
+				// Skip empty slices.
 				if overrideSubField.Kind() == reflect.Slice && overrideSubField.Len() == 0 {
 					continue
 				}
 
 				if !overrideSubField.IsZero() {
-					utils.PrintColored(fmt.Sprintf("Overriding %s.%s: ", field.Name, subField.Name), fmt.Sprint(overrideSubField.Interface()), color.FgHiMagenta)
+					utils.PrintColored(fmt.Sprintf("Overriding %s.%s: ", field.Name, subField.Name),
+						fmt.Sprint(overrideSubField.Interface()), color.FgHiMagenta)
 					configSubField.Set(overrideSubField)
 				}
-			}
-		} else {
-			// **Skip empty slices**
-			if overrideField.Kind() == reflect.Slice && overrideField.Len() == 0 {
-				continue
-			}
-
-			if !overrideField.IsZero() {
-				utils.PrintColored(fmt.Sprintf("Overriding %s: ", field.Name), fmt.Sprint(overrideField.Interface()), color.FgHiMagenta)
-				configField.Set(overrideField)
 			}
 		}
 	}

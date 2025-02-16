@@ -3,7 +3,6 @@
 package config
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"reflect"
@@ -13,7 +12,7 @@ import (
 
 /*
 captureOutput captures the output written to os.Stdout during the execution of f.
-This helper is used to verify the PrintColored output without trying to override the function.
+This helper is used to verify the PrintColored output.
 */
 func captureOutput(f func()) string {
 	oldStdout := os.Stdout
@@ -23,15 +22,12 @@ func captureOutput(f func()) string {
 	f()
 
 	w.Close()
-	var buf bytes.Buffer
+	var buf strings.Builder
 	io.Copy(&buf, r)
 	os.Stdout = oldStdout
 	return buf.String()
 }
 
-/*
-TestLoadMissingFile ensures that loading a non-existent config file returns an error.
-*/
 func TestLoadMissingFile(t *testing.T) {
 	_, err := Load("nonexistent.json")
 	if err == nil {
@@ -39,9 +35,6 @@ func TestLoadMissingFile(t *testing.T) {
 	}
 }
 
-/*
-TestLoadUnreadableFile ensures that loading an unreadable file returns an error.
-*/
 func TestLoadUnreadableFile(t *testing.T) {
 	tmpFile, err := os.CreateTemp("", "unreadable_config_*.json")
 	if err != nil {
@@ -49,9 +42,9 @@ func TestLoadUnreadableFile(t *testing.T) {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	// Make the file unreadable
+	// Make the file unreadable.
 	os.Chmod(tmpFile.Name(), 0000)
-	defer os.Chmod(tmpFile.Name(), 0644) // Restore permissions after test
+	defer os.Chmod(tmpFile.Name(), 0644)
 
 	_, err = Load(tmpFile.Name())
 	if err == nil {
@@ -59,9 +52,6 @@ func TestLoadUnreadableFile(t *testing.T) {
 	}
 }
 
-/*
-TestLoadInvalidJSONFormat ensures that loading a file with invalid JSON format returns an error.
-*/
 func TestLoadInvalidJSONFormat(t *testing.T) {
 	tmpFile, err := os.CreateTemp("", "invalid_config_*.json")
 	if err != nil {
@@ -69,7 +59,7 @@ func TestLoadInvalidJSONFormat(t *testing.T) {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	invalidJSON := `{"url": {"base": "http://example.org"` // Missing closing brace
+	invalidJSON := `{"url": {"base": "http://example.org"`
 	if _, err := tmpFile.Write([]byte(invalidJSON)); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
@@ -81,9 +71,6 @@ func TestLoadInvalidJSONFormat(t *testing.T) {
 	}
 }
 
-/*
-TestLoadVerboseMode ensures that verbose mode prints additional output.
-*/
 func TestLoadVerboseMode(t *testing.T) {
 	Verbose = true
 	defer func() { Verbose = false }()
@@ -106,9 +93,6 @@ func TestLoadVerboseMode(t *testing.T) {
 	}
 }
 
-/*
-TestOverrideWithInvalidField ensures that OverrideWithCLI correctly skips invalid fields.
-*/
 func TestOverrideWithInvalidField(t *testing.T) {
 	cfg := &Config{}
 	cfg.ApplyDefaults()
@@ -127,9 +111,6 @@ func TestOverrideWithInvalidField(t *testing.T) {
 	cfg.OverrideWithCLI(overrides)
 }
 
-/*
-TestOverrideWithEmptySlices ensures that OverrideWithCLI skips overriding fields with empty slices.
-*/
 func TestOverrideWithEmptySlices(t *testing.T) {
 	cfg := &Config{}
 	cfg.ApplyDefaults()
@@ -155,9 +136,6 @@ func TestOverrideWithEmptySlices(t *testing.T) {
 	}
 }
 
-/*
-TestOverrideWithValidFields ensures that OverrideWithCLI correctly applies valid overrides.
-*/
 func TestOverrideWithValidFields(t *testing.T) {
 	cfg := &Config{}
 	cfg.ApplyDefaults()
@@ -182,10 +160,6 @@ func TestOverrideWithValidFields(t *testing.T) {
 	}
 }
 
-/*
-TestOverrideWithCLI_OverrideURLBase tests that a non-zero string override for URL.Base is applied,
-and that the corresponding PrintColored output is produced.
-*/
 func TestOverrideWithCLI_OverrideURLBase(t *testing.T) {
 	cfg := &Config{}
 	cfg.ApplyDefaults()
@@ -209,9 +183,6 @@ func TestOverrideWithCLI_OverrideURLBase(t *testing.T) {
 	}
 }
 
-/*
-TestOverrideWithCLI_SkipZeroOverride tests that a zero value in the override does not change an existing value.
-*/
 func TestOverrideWithCLI_SkipZeroOverride(t *testing.T) {
 	cfg := &Config{}
 	cfg.ApplyDefaults()
@@ -222,7 +193,7 @@ func TestOverrideWithCLI_SkipZeroOverride(t *testing.T) {
 			Routes      []string `json:"routes"`
 			IncludeBase bool     `json:"includeBase"`
 		}{
-			Base: "", // zero value; should not override
+			Base: "",
 		},
 	}
 	output := captureOutput(func() {
@@ -236,10 +207,6 @@ func TestOverrideWithCLI_SkipZeroOverride(t *testing.T) {
 	}
 }
 
-/*
-TestOverrideWithCLI_OverrideNonEmptySlice tests that a non-empty slice override for Storage.OutputFormats is applied,
-and that the expected PrintColored output is produced.
-*/
 func TestOverrideWithCLI_OverrideNonEmptySlice(t *testing.T) {
 	cfg := &Config{}
 	cfg.ApplyDefaults()
@@ -263,9 +230,6 @@ func TestOverrideWithCLI_OverrideNonEmptySlice(t *testing.T) {
 	}
 }
 
-/*
-TestOverrideWithCLI_OverrideBoolean tests that a boolean override (for URL.IncludeBase) is applied when non-zero.
-*/
 func TestOverrideWithCLI_OverrideBoolean(t *testing.T) {
 	cfg := &Config{}
 	cfg.ApplyDefaults()
@@ -289,10 +253,6 @@ func TestOverrideWithCLI_OverrideBoolean(t *testing.T) {
 	}
 }
 
-/*
-TestOverrideWithCLI_OverrideMultiple tests that multiple fields across different sections are correctly overridden.
-It also verifies that the output contains all expected override messages.
-*/
 func TestOverrideWithCLI_OverrideMultiple(t *testing.T) {
 	cfg := &Config{}
 	cfg.ApplyDefaults()
@@ -369,19 +329,14 @@ func TestOverrideWithCLI_OverrideMultiple(t *testing.T) {
 	}
 }
 
-/*
-TestOverrideWithCLI_OverrideParseRules tests that non-zero overrides in the ParseRules struct are applied.
-*/
 func TestOverrideWithCLI_OverrideParseRules(t *testing.T) {
 	cfg := &Config{}
-	// Set initial values for ParseRules.
 	cfg.ParseRules.Title = "Old Title"
 	cfg.ParseRules.MetaDescription = "Old Desc"
 	cfg.ParseRules.ArticleContent = "Old Content"
 	cfg.ParseRules.Author = "Old Author"
 	cfg.ParseRules.DatePublished = "Old Date"
 
-	// Provide overrides.
 	override := Config{
 		ParseRules: struct {
 			Title           string `json:"title,omitempty"`
@@ -426,26 +381,5 @@ func TestOverrideWithCLI_OverrideParseRules(t *testing.T) {
 		if !strings.Contains(output, substr) {
 			t.Errorf("Expected output to contain '%s', got %s", substr, output)
 		}
-	}
-}
-
-/*
-TestOverrideWithCLI_OverrideNonStruct tests that a non-struct field (TestDummy) is overridden.
-This test exercises the else branch in OverrideWithCLI.
-*/
-func TestOverrideWithCLI_OverrideNonStruct(t *testing.T) {
-	cfg := &Config{}
-	cfg.ApplyDefaults()
-	override := Config{
-		TestDummy: 123,
-	}
-	output := captureOutput(func() {
-		cfg.OverrideWithCLI(override)
-	})
-	if cfg.TestDummy != 123 {
-		t.Errorf("Expected TestDummy to be overridden to 123, got %d", cfg.TestDummy)
-	}
-	if !strings.Contains(output, "Overriding TestDummy: ") {
-		t.Errorf("Expected output to contain 'Overriding TestDummy: ', got %s", output)
 	}
 }
