@@ -46,17 +46,22 @@ func init() {
 	flag.BoolVar(&verbose, "v", false, "Enable verbose output (shorthand)")
 }
 
+// Helper functions to create pointers for literal values.
+func ptrString(s string) *string    { return &s }
+func ptrInt(i int) *int             { return &i }
+func ptrFloat64(f float64) *float64 { return &f }
+
 /*
 main is the entry point of Scrapey CLI.
 
 It parses command-line flags, prints a welcome message, loads the configuration,
-handles overrides, and prints confirmation messages for each step.
+applies CLI overrides using a ConfigOverride object, and prints confirmation messages.
 */
 func main() {
 	// Parse CLI flags.
 	flag.Parse()
 
-	// Store the verbose flag in global state
+	// Store the verbose flag in global state.
 	config.Verbose = verbose
 
 	// Print a welcome message in cyan using our PrintColored utility.
@@ -75,26 +80,48 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Construct a partial Config struct for CLI overrides.
-	cliOverrides := config.Config{}
+	// Construct a partial ConfigOverride struct for CLI overrides.
+	cliOverrides := config.ConfigOverride{}
 
 	// Apply URL override if provided.
 	if url != "" {
-		cliOverrides.URL.Base = url
+		cliOverrides.URL = &struct {
+			Base        *string   `json:"base"`
+			Routes      *[]string `json:"routes"`
+			IncludeBase *bool     `json:"includeBase"`
+		}{
+			Base: ptrString(url),
+		}
 	}
 
 	// Apply maxDepth override if provided.
 	if maxDepth > 0 {
-		cliOverrides.ScrapingOptions.MaxDepth = maxDepth
+		if cliOverrides.ScrapingOptions == nil {
+			cliOverrides.ScrapingOptions = &struct {
+				MaxDepth      *int     `json:"maxDepth"`
+				RateLimit     *float64 `json:"rateLimit"`
+				RetryAttempts *int     `json:"retryAttempts"`
+				UserAgent     *string  `json:"userAgent"`
+			}{}
+		}
+		cliOverrides.ScrapingOptions.MaxDepth = ptrInt(maxDepth)
 	}
 
 	// Apply rateLimit override if provided.
 	if rateLimit > 0 {
-		cliOverrides.ScrapingOptions.RateLimit = rateLimit
+		if cliOverrides.ScrapingOptions == nil {
+			cliOverrides.ScrapingOptions = &struct {
+				MaxDepth      *int     `json:"maxDepth"`
+				RateLimit     *float64 `json:"rateLimit"`
+				RetryAttempts *int     `json:"retryAttempts"`
+				UserAgent     *string  `json:"userAgent"`
+			}{}
+		}
+		cliOverrides.ScrapingOptions.RateLimit = ptrFloat64(rateLimit)
 	}
 
 	// Apply all CLI overrides dynamically.
-	cfg.OverrideWithCLI(cliOverrides)
+	cfg.OverrideConfig(cliOverrides)
 
 	// Print confirmation of loaded config.
 	utils.PrintColored("Scrapey CLI initialization complete.", "", color.FgGreen)

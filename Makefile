@@ -57,7 +57,7 @@ install:
 # Ensures gotestsum is installed before running tests.
 # Depends on install.
 # ------------------------------------------------------------------------------
-test: install
+test: 
 	@if ! command -v gotestsum >/dev/null 2>&1; then \
 		echo "Installing gotestsum..."; \
 		go install gotest.tools/gotestsum@latest; \

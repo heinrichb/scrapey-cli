@@ -1,12 +1,9 @@
-// File: pkg/config/config.go
-
 package config
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"reflect"
 
 	"github.com/fatih/color"
 	"github.com/heinrichb/scrapey-cli/pkg/utils"
@@ -35,7 +32,8 @@ Usage:
 	The configuration is loaded from a JSON file to guide the crawler and parser.
 */
 type Config struct {
-	URL struct {
+	Version string `json:"version"`
+	URL     struct {
 		Base        string   `json:"base"`
 		Routes      []string `json:"routes"`
 		IncludeBase bool     `json:"includeBase"`
@@ -61,6 +59,42 @@ type Config struct {
 	DataFormatting struct {
 		CleanWhitespace bool `json:"cleanWhitespace"`
 		RemoveHTML      bool `json:"removeHTML"`
+	} `json:"dataFormatting"`
+}
+
+/*
+ConfigOverride represents a partial configuration used for overriding values.
+All fields are pointers, so that nil indicates "no override" while a non-nil value,
+even if zero, is used to override the corresponding Config field.
+*/
+type ConfigOverride struct {
+	Version *string `json:"version"`
+	URL     *struct {
+		Base        *string   `json:"base"`
+		Routes      *[]string `json:"routes"`
+		IncludeBase *bool     `json:"includeBase"`
+	} `json:"url"`
+	ParseRules *struct {
+		Title           *string `json:"title,omitempty"`
+		MetaDescription *string `json:"metaDescription,omitempty"`
+		ArticleContent  *string `json:"articleContent,omitempty"`
+		Author          *string `json:"author,omitempty"`
+		DatePublished   *string `json:"datePublished,omitempty"`
+	} `json:"parseRules"`
+	Storage *struct {
+		OutputFormats *[]string `json:"outputFormats"`
+		SavePath      *string   `json:"savePath"`
+		FileName      *string   `json:"fileName"`
+	} `json:"storage"`
+	ScrapingOptions *struct {
+		MaxDepth      *int     `json:"maxDepth"`
+		RateLimit     *float64 `json:"rateLimit"`
+		RetryAttempts *int     `json:"retryAttempts"`
+		UserAgent     *string  `json:"userAgent"`
+	} `json:"scrapingOptions"`
+	DataFormatting *struct {
+		CleanWhitespace *bool `json:"cleanWhitespace"`
+		RemoveHTML      *bool `json:"removeHTML"`
 	} `json:"dataFormatting"`
 }
 
@@ -153,71 +187,130 @@ func Load(filePath string) (*Config, error) {
 }
 
 /*
-OverrideWithCLI dynamically overrides config values based on the provided `overrides` struct.
+OverrideConfig applies values from the provided `overrides` object to the existing configuration.
+Only fields with non-nil pointers in the overrides object are applied; all other fields remain unchanged.
 
 Parameters:
-  - overrides: A partial Config struct containing only the fields to override.
+  - overrides: A ConfigOverride struct containing only the fields to override.
+    A nil pointer indicates that no override should occur for that field.
 
 Usage:
 
-	cfg.OverrideWithCLI(Config{
-		URL: struct {
-			Base        string   `json:"base"`
-			Routes      []string `json:"routes"`
-			IncludeBase bool     `json:"includeBase"`
+	cfg.OverrideConfig(ConfigOverride{
+		URL: &struct {
+			Base        *string   `json:"base"`
+			Routes      *[]string `json:"routes"`
+			IncludeBase *bool     `json:"includeBase"`
 		}{
-			Base: "https://example.org",
+			Base: ptrString("https://example.org"),
 		},
-		ScrapingOptions: struct {
-			MaxDepth      int     `json:"maxDepth"`
-			RateLimit     float64 `json:"rateLimit"`
-			RetryAttempts int     `json:"retryAttempts"`
-			UserAgent     string  `json:"userAgent"`
+		ScrapingOptions: &struct {
+			MaxDepth      *int     `json:"maxDepth"`
+			RateLimit     *float64 `json:"rateLimit"`
+			RetryAttempts *int     `json:"retryAttempts"`
+			UserAgent     *string  `json:"userAgent"`
 		}{
-			MaxDepth: 5,
+			MaxDepth: ptrInt(5),
 		},
 	})
 
 Notes:
-  - Only **non-zero** values in `overrides` are applied.
-  - Uses **reflection** to dynamically override values while maintaining type safety.
-  - Since every top‑level field in Config is a struct, only that branch is executed.
+  - Only fields with non-nil pointers in `overrides` are applied.
+  - This allows partial configuration overrides without unintentionally overwriting existing values.
+  - Both struct and non-struct fields are overridden if provided.
 */
-func (cfg *Config) OverrideWithCLI(overrides Config) {
-	cfgValue := reflect.ValueOf(cfg).Elem()
-	overridesValue := reflect.ValueOf(overrides)
+func (cfg *Config) OverrideConfig(overrides ConfigOverride) {
+	// Override non-struct field: Version.
+	if overrides.Version != nil {
+		utils.PrintColored("Overriding Version: ", *overrides.Version, color.FgHiMagenta)
+		cfg.Version = *overrides.Version
+	}
 
-	for i := 0; i < overridesValue.NumField(); i++ {
-		field := overridesValue.Type().Field(i)
-		overrideField := overridesValue.Field(i)
-		configField := cfgValue.FieldByName(field.Name)
-
-		if !configField.IsValid() || !configField.CanSet() {
-			continue
+	// Override URL fields.
+	if overrides.URL != nil {
+		if overrides.URL.Base != nil {
+			utils.PrintColored("Overriding URL.Base: ", *overrides.URL.Base, color.FgHiMagenta)
+			cfg.URL.Base = *overrides.URL.Base
 		}
+		if overrides.URL.Routes != nil {
+			utils.PrintColored("Overriding URL.Routes: ", fmt.Sprint(*overrides.URL.Routes), color.FgHiMagenta)
+			cfg.URL.Routes = *overrides.URL.Routes
+		}
+		if overrides.URL.IncludeBase != nil {
+			utils.PrintColored("Overriding URL.IncludeBase: ", fmt.Sprint(*overrides.URL.IncludeBase), color.FgHiMagenta)
+			cfg.URL.IncludeBase = *overrides.URL.IncludeBase
+		}
+	}
 
-		// Since all fields in Config are structs, we only need to handle that branch.
-		if overrideField.Kind() == reflect.Struct {
-			for j := 0; j < overrideField.NumField(); j++ {
-				subField := overrideField.Type().Field(j)
-				overrideSubField := overrideField.Field(j)
-				configSubField := configField.FieldByName(subField.Name)
+	// Override ParseRules fields.
+	if overrides.ParseRules != nil {
+		if overrides.ParseRules.Title != nil {
+			utils.PrintColored("Overriding ParseRules.Title: ", *overrides.ParseRules.Title, color.FgHiMagenta)
+			cfg.ParseRules.Title = *overrides.ParseRules.Title
+		}
+		if overrides.ParseRules.MetaDescription != nil {
+			utils.PrintColored("Overriding ParseRules.MetaDescription: ", *overrides.ParseRules.MetaDescription, color.FgHiMagenta)
+			cfg.ParseRules.MetaDescription = *overrides.ParseRules.MetaDescription
+		}
+		if overrides.ParseRules.ArticleContent != nil {
+			utils.PrintColored("Overriding ParseRules.ArticleContent: ", *overrides.ParseRules.ArticleContent, color.FgHiMagenta)
+			cfg.ParseRules.ArticleContent = *overrides.ParseRules.ArticleContent
+		}
+		if overrides.ParseRules.Author != nil {
+			utils.PrintColored("Overriding ParseRules.Author: ", *overrides.ParseRules.Author, color.FgHiMagenta)
+			cfg.ParseRules.Author = *overrides.ParseRules.Author
+		}
+		if overrides.ParseRules.DatePublished != nil {
+			utils.PrintColored("Overriding ParseRules.DatePublished: ", *overrides.ParseRules.DatePublished, color.FgHiMagenta)
+			cfg.ParseRules.DatePublished = *overrides.ParseRules.DatePublished
+		}
+	}
 
-				if !configSubField.IsValid() || !configSubField.CanSet() {
-					continue
-				}
+	// Override Storage fields.
+	if overrides.Storage != nil {
+		if overrides.Storage.OutputFormats != nil {
+			utils.PrintColored("Overriding Storage.OutputFormats: ", fmt.Sprint(*overrides.Storage.OutputFormats), color.FgHiMagenta)
+			cfg.Storage.OutputFormats = *overrides.Storage.OutputFormats
+		}
+		if overrides.Storage.SavePath != nil {
+			utils.PrintColored("Overriding Storage.SavePath: ", *overrides.Storage.SavePath, color.FgHiMagenta)
+			cfg.Storage.SavePath = *overrides.Storage.SavePath
+		}
+		if overrides.Storage.FileName != nil {
+			utils.PrintColored("Overriding Storage.FileName: ", *overrides.Storage.FileName, color.FgHiMagenta)
+			cfg.Storage.FileName = *overrides.Storage.FileName
+		}
+	}
 
-				// Skip empty slices.
-				if overrideSubField.Kind() == reflect.Slice && overrideSubField.Len() == 0 {
-					continue
-				}
+	// Override ScrapingOptions fields.
+	if overrides.ScrapingOptions != nil {
+		if overrides.ScrapingOptions.MaxDepth != nil {
+			utils.PrintColored("Overriding ScrapingOptions.MaxDepth: ", fmt.Sprint(*overrides.ScrapingOptions.MaxDepth), color.FgHiMagenta)
+			cfg.ScrapingOptions.MaxDepth = *overrides.ScrapingOptions.MaxDepth
+		}
+		if overrides.ScrapingOptions.RateLimit != nil {
+			utils.PrintColored("Overriding ScrapingOptions.RateLimit: ", fmt.Sprint(*overrides.ScrapingOptions.RateLimit), color.FgHiMagenta)
+			cfg.ScrapingOptions.RateLimit = *overrides.ScrapingOptions.RateLimit
+		}
+		if overrides.ScrapingOptions.RetryAttempts != nil {
+			utils.PrintColored("Overriding ScrapingOptions.RetryAttempts: ", fmt.Sprint(*overrides.ScrapingOptions.RetryAttempts), color.FgHiMagenta)
+			cfg.ScrapingOptions.RetryAttempts = *overrides.ScrapingOptions.RetryAttempts
+		}
+		if overrides.ScrapingOptions.UserAgent != nil {
+			utils.PrintColored("Overriding ScrapingOptions.UserAgent: ", *overrides.ScrapingOptions.UserAgent, color.FgHiMagenta)
+			cfg.ScrapingOptions.UserAgent = *overrides.ScrapingOptions.UserAgent
+		}
+	}
 
-				if !overrideSubField.IsZero() {
-					utils.PrintColored(fmt.Sprintf("Overriding %s.%s: ", field.Name, subField.Name),
-						fmt.Sprint(overrideSubField.Interface()), color.FgHiMagenta)
-					configSubField.Set(overrideSubField)
-				}
-			}
+	// Override DataFormatting fields.
+	if overrides.DataFormatting != nil {
+		if overrides.DataFormatting.CleanWhitespace != nil {
+			utils.PrintColored("Overriding DataFormatting.CleanWhitespace: ", fmt.Sprint(*overrides.DataFormatting.CleanWhitespace), color.FgHiMagenta)
+			cfg.DataFormatting.CleanWhitespace = *overrides.DataFormatting.CleanWhitespace
+		}
+		if overrides.DataFormatting.RemoveHTML != nil {
+			utils.PrintColored("Overriding DataFormatting.RemoveHTML: ", fmt.Sprint(*overrides.DataFormatting.RemoveHTML), color.FgHiMagenta)
+			cfg.DataFormatting.RemoveHTML = *overrides.DataFormatting.RemoveHTML
 		}
 	}
 }
