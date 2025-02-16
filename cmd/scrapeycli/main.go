@@ -1,5 +1,3 @@
-// File: cmd/scrapeycli/main.go
-
 package main
 
 import (
@@ -16,33 +14,50 @@ Global variables for storing command-line arguments.
 
 - configPath: The path to the configuration file.
 - url: The URL to be scraped, which may override the URL in the config.
+- maxDepth: Overrides the scraping depth if set.
+- rateLimit: Overrides the request rate limit.
+- verbose: Enables verbose output.
 */
 var (
 	configPath string
 	url        string
+	maxDepth   int
+	rateLimit  float64
+	verbose    bool
 )
 
 /*
 init registers command-line flags for configuration.
 
-It sets up two flags for the config file ("config" and its shorthand "c")
-and a flag for the URL override.
+It sets up flags for:
+- The config file ("config" and its shorthand "c").
+- URL override.
+- Scraping depth override.
+- Rate limit override.
+- Verbose output ("verbose" and its shorthand "v").
 */
 func init() {
 	flag.StringVar(&configPath, "config", "", "Path to config file")
 	flag.StringVar(&configPath, "c", "", "Path to config file (shorthand)")
 	flag.StringVar(&url, "url", "", "URL to scrape (overrides config)")
+	flag.IntVar(&maxDepth, "maxDepth", 0, "Override max crawl depth")
+	flag.Float64Var(&rateLimit, "rateLimit", 0, "Override request rate limit (seconds)")
+	flag.BoolVar(&verbose, "verbose", false, "Enable verbose output")
+	flag.BoolVar(&verbose, "v", false, "Enable verbose output (shorthand)")
 }
 
 /*
 main is the entry point of Scrapey CLI.
 
 It parses command-line flags, prints a welcome message, loads the configuration,
-handles URL overrides, and prints confirmation messages for each step.
+handles overrides, and prints confirmation messages for each step.
 */
 func main() {
 	// Parse CLI flags.
 	flag.Parse()
+
+	// Store the verbose flag in global state
+	config.Verbose = verbose
 
 	// Print a welcome message in cyan using our PrintColored utility.
 	utils.PrintColored("Welcome to Scrapey CLI!", "", color.FgCyan)
@@ -60,16 +75,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	// If a URL is provided via the command line, override the configuration's base URL.
+	// Construct a partial Config struct for CLI overrides.
+	cliOverrides := config.Config{}
+
+	// Apply URL override if provided.
 	if url != "" {
-		utils.PrintColored("Overriding config with URL flag: ", url, color.FgHiMagenta)
-		cfg.URL.Base = url
+		cliOverrides.URL.Base = url
 	}
 
-	// Print confirmation of loaded config.
-	utils.PrintColored("Loaded config from: ", configPath, color.FgHiGreen)
+	// Apply maxDepth override if provided.
+	if maxDepth > 0 {
+		cliOverrides.ScrapingOptions.MaxDepth = maxDepth
+	}
 
-	// Indicate that initialization is complete by printing a success message in green.
+	// Apply rateLimit override if provided.
+	if rateLimit > 0 {
+		cliOverrides.ScrapingOptions.RateLimit = rateLimit
+	}
+
+	// Apply all CLI overrides dynamically.
+	cfg.OverrideWithCLI(cliOverrides)
+
+	// Print confirmation of loaded config.
 	utils.PrintColored("Scrapey CLI initialization complete.", "", color.FgGreen)
 
 	// Print which routes will be scraped.
