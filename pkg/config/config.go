@@ -29,6 +29,7 @@ Fields:
   - Storage: A struct defining how data is saved.
   - ScrapingOptions: Settings for crawling behavior.
   - DataFormatting: Options for cleaning extracted content.
+  - TestDummy: A dummy non-struct field added solely to exercise the else branch in OverrideWithCLI.
 
 Usage:
 
@@ -62,6 +63,8 @@ type Config struct {
 		CleanWhitespace bool `json:"cleanWhitespace"`
 		RemoveHTML      bool `json:"removeHTML"`
 	} `json:"dataFormatting"`
+	// TestDummy is a dummy non-struct field added solely to exercise the else branch in OverrideWithCLI.
+	TestDummy int `json:"testDummy,omitempty"`
 }
 
 /*
