@@ -154,14 +154,16 @@ func Load(filePath string) (*Config, error) {
 }
 
 /*
-OverrideWithCLI dynamically overrides config values based on the provided `overrides` struct.
+OverrideConfig applies all values from the provided `overrides` struct to the existing configuration.
 
 Parameters:
-  - overrides: A partial Config struct containing only the fields to override.
+  - overrides: A partial Config struct containing the fields to override. All values provided—including zero values,
+    empty slices, and non-struct fields (e.g., Version)—are applied exactly as given.
 
 Usage:
 
-	cfg.OverrideWithCLI(Config{
+	cfg.OverrideConfig(Config{
+		Version: "v2.0",
 		URL: struct {
 			Base        string   `json:"base"`
 			Routes      []string `json:"routes"`
@@ -180,35 +182,27 @@ Usage:
 	})
 
 Notes:
-  - Only **non-zero** values in `overrides` are applied.
+  - All values provided in `overrides` are applied, regardless of whether they are non-zero.
   - Uses **reflection** to dynamically override values while maintaining type safety.
-  - Since every top‑level field in Config is a struct, only that branch is executed.
+  - Both struct and non-struct fields are overridden.
 */
 func (cfg *Config) OverrideConfig(overrides Config) {
 	cfgValue := reflect.ValueOf(cfg).Elem()
 	overridesValue := reflect.ValueOf(overrides)
 
+	// Since every top-level field in Config is exported and settable,
+	// we do not check for validity or settable status.
 	for i := 0; i < overridesValue.NumField(); i++ {
 		field := overridesValue.Type().Field(i)
 		overrideField := overridesValue.Field(i)
 		configField := cfgValue.FieldByName(field.Name)
 
-		if !configField.IsValid() || !configField.CanSet() {
-			continue
-		}
-
-		// If the override field is a struct, iterate over its subfields and apply every value (even if zero or empty).
 		if overrideField.Kind() == reflect.Struct {
+			// For struct fields, override every subfield.
 			for j := 0; j < overrideField.NumField(); j++ {
 				subField := overrideField.Type().Field(j)
 				overrideSubField := overrideField.Field(j)
 				configSubField := configField.FieldByName(subField.Name)
-
-				if !configSubField.IsValid() || !configSubField.CanSet() {
-					continue
-				}
-
-				// Always override the subfield value, regardless of its value.
 				utils.PrintColored(fmt.Sprintf("Overriding %s.%s: ", field.Name, subField.Name),
 					fmt.Sprint(overrideSubField.Interface()), color.FgHiMagenta)
 				configSubField.Set(overrideSubField)
