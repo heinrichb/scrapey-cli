@@ -3,7 +3,10 @@ module github.com/heinrichb/scrapey-cli
 
 go 1.23.4
 
-require github.com/fatih/color v1.18.0
+require (
+	bou.ke/monkey v1.0.2
+	github.com/fatih/color v1.18.0
+)
 
 require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
