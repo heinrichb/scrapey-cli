@@ -1,10 +1,9 @@
-// File: scripts/coverage_formatter.go
-
 package main
 
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,22 +14,21 @@ import (
 )
 
 // detailedCoverageRegex matches typical coverage detail lines from `go tool cover -func`.
-// Example of a matched line:
+// Example:
 //
 //	github.com/.../file.go:31:     funcName                100.0%
 var detailedCoverageRegex = regexp.MustCompile(`^([^:]+\.go):(\d+):(\s+)(\S+)(\s+)([0-9]+\.[0-9]+%)$`)
 
-// fallbackCoverageRegex matches coverage percentages in lines that do not match
-// the above pattern (e.g., "total: (statements) 70.0%").
+// fallbackCoverageRegex matches coverage percentages in fallback lines (e.g. "total: (statements) 70.0%").
 var fallbackCoverageRegex = regexp.MustCompile(`([0-9]+\.[0-9]+%)`)
 
-// Coverage thresholds for color-coding coverage percentages.
+// Coverage thresholds.
 const (
 	HighCoverageThreshold   = 80.0
 	MediumCoverageThreshold = 50.0
 )
 
-// Color styles for different parts of a coverage line.
+// Color styles.
 var (
 	dirStyle     = color.New(color.FgWhite).Add(color.Bold)
 	fileStyle    = color.New(color.FgCyan).Add(color.Bold)
@@ -41,53 +39,50 @@ var (
 	colorLowCov  = color.New(color.FgRed)
 )
 
-// main reads from stdin and prints out styled coverage lines to stdout.
-// Usage example:
-//
-//	go tool cover -func=coverage.out | go run ./scripts/coverage_formatter.go
-func main() {
-	scanner := bufio.NewScanner(os.Stdin)
+// inputReader is our source for input; it defaults to os.Stdin but can be overridden in tests.
+var inputReader io.Reader = os.Stdin
+
+// exitFunc is used to exit in main(). It defaults to os.Exit but can be overridden in tests.
+var exitFunc = os.Exit
+
+// run reads from the provided reader and writes styled output to stdout.
+// It returns an error if a read error occurs.
+func run(in io.Reader) error {
+	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		originalLine := scanner.Text()
 		styledLine := styleCoverageLine(originalLine)
 		fmt.Println(styledLine)
 	}
-
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
-		os.Exit(1)
+		return err
+	}
+	return nil
+}
+
+// main calls run(inputReader) and uses exitFunc if an error occurs.
+func main() {
+	if err := run(inputReader); err != nil {
+		exitFunc(1)
 	}
 }
 
-// styleCoverageLine determines whether a line is a "detailed coverage" line
-// (i.e., matching our `detailedCoverageRegex`) or a fallback line
-// (like "total: (statements) 70.0%"). It returns the colorized version
-// while preserving all original spacing.
+// styleCoverageLine returns a styled version of the given line.
+// If the line matches detailedCoverageRegex, it processes it accordingly;
+// otherwise, it falls back to colorizeCoverageInLine.
 func styleCoverageLine(line string) string {
-	// Attempt to match the "detailed coverage" regex.
 	if matches := detailedCoverageRegex.FindStringSubmatch(line); matches != nil {
-		// Matches structure:
-		//   [1]: fullPath     => e.g. "github.com/.../file.go"
-		//   [2]: lineNumber   => e.g. "31"
-		//   [3]: spacingBeforeFunc => e.g. "     "
-		//   [4]: funcName     => e.g. "init"
-		//   [5]: spacingBeforeCoverage => e.g. "           "
-		//   [6]: coverageStr  => e.g. "100.0%"
-
 		fullPath := matches[1]
 		lineNumber := matches[2]
 		spacingBeforeFunc := matches[3]
 		funcName := matches[4]
 		spacingBeforeCoverage := matches[5]
 		coverageString := matches[6]
-
 		coloredFilePath := formatPathAndFile(fullPath)
 		coloredLineNumber := lineNumStyle.Sprint(lineNumber)
 		coloredFunction := funcStyle.Sprint(funcName)
 		coloredCoverage := colorizeCoverage(coverageString)
-
-		// Rebuild the line EXACTLY with the original spacing.
-		// e.g.: "github.com/.../file.go:31:" + spacingBeforeFunc + funcName + spacingBeforeCoverage + coverage
 		return fmt.Sprintf("%s:%s:%s%s%s%s",
 			coloredFilePath,
 			coloredLineNumber,
@@ -97,44 +92,32 @@ func styleCoverageLine(line string) string {
 			coloredCoverage,
 		)
 	}
-
-	// If the line does not match our detailed coverage pattern,
-	// we look for coverage percentages (e.g., "70.0%") and colorize them.
 	return colorizeCoverageInLine(line)
 }
 
-// formatPathAndFile splits a path like "dir/subdir/file.go", coloring the directory
-// part differently from the file name. If there's no directory component, it just
-// colors the file name. Example output might look like:
-//
-//	github.com/.../dir/  file.go
-//
-// with dir vs. file in different colors.
+// formatPathAndFile splits a file path into directory and file components and colors them.
 func formatPathAndFile(fullPath string) string {
 	dir := filepath.Dir(fullPath)
 	file := filepath.Base(fullPath)
-
 	if dir == "." || dir == "" {
 		return fileStyle.Sprint(file)
 	}
 	return dirStyle.Sprintf("%s/", dir) + fileStyle.Sprint(file)
 }
 
-// colorizeCoverageInLine scans a fallback line for coverage percentages
-// (e.g., "70.0%") and colorizes them in-place.
+// colorizeCoverageInLine replaces all coverage percentages in a line with their colored versions.
 func colorizeCoverageInLine(line string) string {
 	return fallbackCoverageRegex.ReplaceAllStringFunc(line, func(match string) string {
 		return colorizeCoverage(match)
 	})
 }
 
-// colorizeCoverage picks a color based on numeric coverage thresholds, returning
-// a styled string. For instance, "100.0%" might return green text, "60.0%" yellow, etc.
+// colorizeCoverage returns a colored string for the given coverage percentage.
 func colorizeCoverage(coverageStr string) string {
 	rawNumber := strings.TrimSuffix(coverageStr, "%")
 	coverageValue, parseErr := strconv.ParseFloat(rawNumber, 64)
 	if parseErr != nil {
-		return coverageStr // fallback: invalid numeric
+		return coverageStr
 	}
 	switch {
 	case coverageValue >= HighCoverageThreshold:
