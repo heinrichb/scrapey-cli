@@ -6,10 +6,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/fatih/color"
 	"github.com/heinrichb/scrapey-cli/pkg/utils"
 )
+
+/*
+Global Verbose flag.
+
+This flag determines whether verbose output is enabled.
+It is set in `main.go` and used throughout the application.
+*/
+var Verbose bool
 
 /*
 Config holds configuration data used by Scrapey CLI.
@@ -56,6 +65,48 @@ type Config struct {
 }
 
 /*
+ApplyDefaults populates missing fields in the Config struct with default values.
+
+Usage:
+
+	cfg.ApplyDefaults()
+
+Notes:
+  - Ensures that a missing Base URL defaults to "https://example.com".
+  - Sets default scraping and storage parameters.
+  - Provides a sensible fallback for all configurable values.
+*/
+func (cfg *Config) ApplyDefaults() {
+	if cfg.URL.Base == "" {
+		cfg.URL.Base = "https://example.com"
+	}
+	if len(cfg.URL.Routes) == 0 {
+		cfg.URL.Routes = []string{"/"}
+	}
+	if cfg.ScrapingOptions.MaxDepth == 0 {
+		cfg.ScrapingOptions.MaxDepth = 2
+	}
+	if cfg.ScrapingOptions.RateLimit == 0 {
+		cfg.ScrapingOptions.RateLimit = 1.5
+	}
+	if cfg.ScrapingOptions.RetryAttempts == 0 {
+		cfg.ScrapingOptions.RetryAttempts = 3
+	}
+	if cfg.ScrapingOptions.UserAgent == "" {
+		cfg.ScrapingOptions.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+	}
+	if len(cfg.Storage.OutputFormats) == 0 {
+		cfg.Storage.OutputFormats = []string{"json"}
+	}
+	if cfg.Storage.SavePath == "" {
+		cfg.Storage.SavePath = "output/"
+	}
+	if cfg.Storage.FileName == "" {
+		cfg.Storage.FileName = "scraped_data"
+	}
+}
+
+/*
 Load reads configuration data from the specified filePath.
 
 Parameters:
@@ -72,33 +123,108 @@ Usage:
 	    // Handle error
 	}
 	// Use cfg to configure the application.
-
-Notes:
-  - This function uses os.ReadFile to read the file.
-  - It prints a confirmation message in high-intensity green using the PrintColored utility.
-  - It then calls PrintNonEmptyFields from the utils package to display non-empty config fields.
 */
 func Load(filePath string) (*Config, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("config file %s does not exist", filePath)
 	}
 
-	// Print confirmation that the config was loaded, using our PrintColored utility.
 	utils.PrintColored("Loaded config from: ", filePath, color.FgHiGreen)
 
-	// Read file contents using os.ReadFile.
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %v", err)
 	}
 
-	// Unmarshal JSON into a Config struct.
 	var cfg Config
 	if err := json.Unmarshal(content, &cfg); err != nil {
 		return nil, fmt.Errorf("invalid JSON in config file: %v", err)
 	}
 
-	// Print non-empty configuration fields using a utility function.
-	utils.PrintNonEmptyFields("", cfg)
+	// Apply default values where necessary.
+	cfg.ApplyDefaults()
+
+	// **Verbose Mode: Print Non-Empty Fields**
+	if Verbose {
+		utils.PrintNonEmptyFields("", cfg)
+	}
+
 	return &cfg, nil
+}
+
+/*
+OverrideWithCLI dynamically overrides config values based on the provided `overrides` struct.
+
+Parameters:
+  - overrides: A partial Config struct containing only the fields to override.
+
+Usage:
+
+	cfg.OverrideWithCLI(Config{
+		URL: struct {
+			Base        string   `json:"base"`
+			Routes      []string `json:"routes"`
+			IncludeBase bool     `json:"includeBase"`
+		}{
+			Base: "https://example.org",
+		},
+		ScrapingOptions: struct {
+			MaxDepth      int     `json:"maxDepth"`
+			RateLimit     float64 `json:"rateLimit"`
+			RetryAttempts int     `json:"retryAttempts"`
+			UserAgent     string  `json:"userAgent"`
+		}{
+			MaxDepth: 5,
+		},
+	})
+
+Notes:
+  - Only **non-zero** values in `overrides` are applied.
+  - Uses **reflection** to dynamically override values while maintaining type safety.
+*/
+func (cfg *Config) OverrideWithCLI(overrides Config) {
+	cfgValue := reflect.ValueOf(cfg).Elem()
+	overridesValue := reflect.ValueOf(overrides)
+
+	for i := 0; i < overridesValue.NumField(); i++ {
+		field := overridesValue.Type().Field(i)
+		overrideField := overridesValue.Field(i)
+		configField := cfgValue.FieldByName(field.Name)
+
+		if !configField.IsValid() || !configField.CanSet() {
+			continue
+		}
+
+		if overrideField.Kind() == reflect.Struct {
+			for j := 0; j < overrideField.NumField(); j++ {
+				subField := overrideField.Type().Field(j)
+				overrideSubField := overrideField.Field(j)
+				configSubField := configField.FieldByName(subField.Name)
+
+				if !configSubField.IsValid() || !configSubField.CanSet() {
+					continue
+				}
+
+				// **Skip empty slices**
+				if overrideSubField.Kind() == reflect.Slice && overrideSubField.Len() == 0 {
+					continue
+				}
+
+				if !overrideSubField.IsZero() {
+					utils.PrintColored(fmt.Sprintf("Overriding %s.%s: ", field.Name, subField.Name), fmt.Sprint(overrideSubField.Interface()), color.FgHiMagenta)
+					configSubField.Set(overrideSubField)
+				}
+			}
+		} else {
+			// **Skip empty slices**
+			if overrideField.Kind() == reflect.Slice && overrideField.Len() == 0 {
+				continue
+			}
+
+			if !overrideField.IsZero() {
+				utils.PrintColored(fmt.Sprintf("Overriding %s: ", field.Name), fmt.Sprint(overrideField.Interface()), color.FgHiMagenta)
+				configField.Set(overrideField)
+			}
+		}
+	}
 }

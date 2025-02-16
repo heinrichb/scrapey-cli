@@ -4,16 +4,14 @@ package config
 
 import (
 	"os"
+	"reflect"
 	"testing"
 )
 
 /*
-TestLoadValidConfig creates a temporary file with valid JSON configuration data,
-writes a valid Base URL value, and attempts to load the configuration using Load.
-It verifies that the returned Config object contains the expected Base URL.
+TestLoadValidConfig ensures that loading a valid config file works as expected.
 */
 func TestLoadValidConfig(t *testing.T) {
-	// Create a temporary file with valid JSON using os.CreateTemp.
 	tmpFile, err := os.CreateTemp("", "valid_config_*.json")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
@@ -24,49 +22,51 @@ func TestLoadValidConfig(t *testing.T) {
 	if _, err := tmpFile.Write([]byte(validJSON)); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
-	tmpFile.Close() // Close the file so it can be read by Load.
+	tmpFile.Close()
 
-	// Load the configuration from the temporary file.
 	cfg, err := Load(tmpFile.Name())
 	if err != nil {
 		t.Fatalf("Expected valid config, got error: %v", err)
 	}
 
-	// Check that the Base URL in the configuration matches the expected value.
-	if cfg.URL.Base != "http://example.org" {
-		t.Errorf("Expected Base URL 'http://example.org', got '%s'", cfg.URL.Base)
+	expectedBaseURL := "http://example.org"
+	expectedRoute := "/test"
+
+	if cfg.URL.Base != expectedBaseURL {
+		t.Errorf("Expected Base URL '%s', got '%s'", expectedBaseURL, cfg.URL.Base)
 	}
 
-	// Check that the IncludeBase field is set correctly.
 	if !cfg.URL.IncludeBase {
 		t.Errorf("Expected IncludeBase to be true, got false")
 	}
 
-	// Ensure at least one route exists.
-	if len(cfg.URL.Routes) == 0 || cfg.URL.Routes[0] != "/test" {
-		t.Errorf("Expected routes to include '/test', got %v", cfg.URL.Routes)
+	if len(cfg.URL.Routes) == 0 || cfg.URL.Routes[0] != expectedRoute {
+		t.Errorf("Expected routes to include '%s', got %v", expectedRoute, cfg.URL.Routes)
 	}
 }
 
 /*
-TestLoadNonexistentFile attempts to load a configuration from a non-existent file
-and verifies that Load returns an error.
+TestLoadEmptyFile ensures that loading an empty config file does not cause an unexpected crash.
 */
-func TestLoadNonexistentFile(t *testing.T) {
-	// Attempt to load a config from a non-existent file.
-	_, err := Load("nonexistent_file.json")
+func TestLoadEmptyFile(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "empty_config_*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	tmpFile.Close() // Empty file
+
+	_, err = Load(tmpFile.Name())
 	if err == nil {
-		t.Fatalf("Expected error for non-existent file, got nil")
+		t.Fatalf("Expected an error for empty config file, got nil")
 	}
 }
 
 /*
-TestLoadInvalidJSON creates a temporary file with invalid JSON content
-(missing a closing brace) and attempts to load the configuration.
-The test confirms that an error is returned due to invalid JSON.
+TestLoadInvalidJSON ensures that a badly formatted JSON file correctly returns an error.
 */
 func TestLoadInvalidJSON(t *testing.T) {
-	// Create a temporary file with invalid JSON using os.CreateTemp.
 	tmpFile, err := os.CreateTemp("", "invalid_config_*.json")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
@@ -79,9 +79,100 @@ func TestLoadInvalidJSON(t *testing.T) {
 	}
 	tmpFile.Close()
 
-	// Attempt to load the configuration from the temporary file.
 	_, err = Load(tmpFile.Name())
 	if err == nil {
 		t.Fatalf("Expected error for invalid JSON, got nil")
+	}
+}
+
+/*
+TestApplyDefaults verifies that ApplyDefaults correctly sets default values.
+*/
+func TestApplyDefaults(t *testing.T) {
+	cfg := &Config{}
+	cfg.ApplyDefaults()
+
+	expectedBaseURL := "https://example.com"
+	expectedOutputFormat := "json"
+
+	if cfg.URL.Base != expectedBaseURL {
+		t.Errorf("Expected default Base URL '%s', got '%s'", expectedBaseURL, cfg.URL.Base)
+	}
+	if len(cfg.Storage.OutputFormats) == 0 || cfg.Storage.OutputFormats[0] != expectedOutputFormat {
+		t.Errorf("Expected default output format '%s', got %v", expectedOutputFormat, cfg.Storage.OutputFormats)
+	}
+}
+
+/*
+TestOverrideWithCLI ensures that OverrideWithCLI dynamically updates config values.
+*/
+func TestOverrideWithCLI(t *testing.T) {
+	cfg := &Config{}
+	cfg.ApplyDefaults()
+
+	newBaseURL := "https://cli-example.com"
+	newRoutes := []string{"/cli-route1", "/cli-route2"}
+	newMaxDepth := 10
+	newUserAgent := "Custom CLI UserAgent"
+
+	overrides := Config{
+		URL: struct {
+			Base        string   `json:"base"`
+			Routes      []string `json:"routes"`
+			IncludeBase bool     `json:"includeBase"`
+		}{
+			Base:        newBaseURL,
+			Routes:      newRoutes,
+			IncludeBase: true,
+		},
+		ScrapingOptions: struct {
+			MaxDepth      int     `json:"maxDepth"`
+			RateLimit     float64 `json:"rateLimit"`
+			RetryAttempts int     `json:"retryAttempts"`
+			UserAgent     string  `json:"userAgent"`
+		}{
+			MaxDepth:  newMaxDepth,
+			UserAgent: newUserAgent,
+		},
+	}
+
+	cfg.OverrideWithCLI(overrides)
+
+	if cfg.URL.Base != newBaseURL {
+		t.Errorf("Expected Base URL to be overridden to '%s', got '%s'", newBaseURL, cfg.URL.Base)
+	}
+
+	if len(cfg.URL.Routes) != len(newRoutes) || cfg.URL.Routes[0] != newRoutes[0] || cfg.URL.Routes[1] != newRoutes[1] {
+		t.Errorf("Expected Routes to be '%v', got '%v'", newRoutes, cfg.URL.Routes)
+	}
+
+	if !cfg.URL.IncludeBase {
+		t.Errorf("Expected IncludeBase to be true, got false")
+	}
+
+	if cfg.ScrapingOptions.MaxDepth != newMaxDepth {
+		t.Errorf("Expected MaxDepth to be overridden to %d, got '%d'", newMaxDepth, cfg.ScrapingOptions.MaxDepth)
+	}
+
+	if cfg.ScrapingOptions.UserAgent != newUserAgent {
+		t.Errorf("Expected UserAgent to be '%s', got '%s'", newUserAgent, cfg.ScrapingOptions.UserAgent)
+	}
+}
+
+/*
+TestOverrideWithEmptyCLI ensures that OverrideWithCLI does nothing if no values are provided.
+*/
+func TestOverrideWithEmptyCLI(t *testing.T) {
+	cfg := &Config{}
+	cfg.ApplyDefaults()
+
+	// Make a deep copy of the original config for comparison.
+	originalConfig := *cfg
+
+	cfg.OverrideWithCLI(Config{}) // Pass an empty config override
+
+	// Use reflect.DeepEqual to compare struct contents.
+	if !reflect.DeepEqual(*cfg, originalConfig) {
+		t.Errorf("Expected config to remain unchanged when empty overrides are applied.\nExpected: %+v\nGot: %+v", originalConfig, *cfg)
 	}
 }

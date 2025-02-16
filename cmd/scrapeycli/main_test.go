@@ -15,7 +15,7 @@ It sets the working directory to the project root (two levels up from cmd/scrape
 and returns the combined output along with any error.
 
 Parameters:
-  - t: The current testing context (not used directly, but conforms to typical test helper function signatures).
+  - t: The current testing context.
   - args: A variadic list of arguments to be passed to the go run command.
 
 Usage:
@@ -31,39 +31,39 @@ func runMainCommand(_ *testing.T, args ...string) (string, error) {
 
 /*
 TestFlagRegistration verifies that all necessary command-line flags are properly registered.
-The application depends on these flags for configuration input and URL overrides.
-
-Checks:
-  - "config" and "c" flags
-  - "url" flag
+The application depends on these flags for configuration input and CLI overrides.
 */
 func TestFlagRegistration(t *testing.T) {
-	if f := flag.Lookup("config"); f == nil {
-		t.Error("Expected flag 'config' to be registered")
-	}
-	if f := flag.Lookup("c"); f == nil {
-		t.Error("Expected shorthand flag 'c' to be registered")
-	}
-	if f := flag.Lookup("url"); f == nil {
-		t.Error("Expected flag 'url' to be registered")
+	expectedFlags := []string{"config", "c", "url", "maxDepth", "rateLimit"}
+	for _, flagName := range expectedFlags {
+		if f := flag.Lookup(flagName); f == nil {
+			t.Errorf("Expected flag '%s' to be registered", flagName)
+		}
 	}
 }
 
 /*
-TestMainExecution runs the main program with a valid configuration file and checks for the expected output.
+TestMainExecution runs the main program with a valid configuration file
+and ensures it initializes correctly.
 */
 func TestMainExecution(t *testing.T) {
-	output, err := runMainCommand(t, "--config", "configs/default.json")
+	output, err := runMainCommand(t)
 	if err != nil {
 		t.Fatalf("Failed to run main.go: %v\nOutput: %s", err, output)
 	}
 
-	if !strings.Contains(output, "Welcome to Scrapey CLI!") {
-		t.Errorf("Expected welcome message not found in output.\nOutput: %s", output)
+	// Define expected phrases used multiple times
+	requiredPhrases := []string{
+		"Welcome to Scrapey CLI!",
+		"Scrapey CLI initialization complete.",
+		"Base URL: https://example.com",
 	}
 
-	if !strings.Contains(output, "Base URL: https://example.com") {
-		t.Errorf("Expected base URL output not found.\nOutput: %s", output)
+	// Validate presence of required phrases
+	for _, phrase := range requiredPhrases {
+		if !strings.Contains(output, phrase) {
+			t.Errorf("Expected output to contain '%s'.\nOutput: %s", phrase, output)
+		}
 	}
 }
 
@@ -77,6 +77,7 @@ func TestMainConfigFailure(t *testing.T) {
 		t.Fatalf("Expected failure due to config load error, but got success")
 	}
 
+	// Validate correct exit behavior
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		if exitErr.ExitCode() != 1 {
 			t.Errorf("Expected exit code 1, got %d", exitErr.ExitCode())
@@ -87,17 +88,42 @@ func TestMainConfigFailure(t *testing.T) {
 }
 
 /*
-TestURLOverride verifies that specifying a URL via CLI correctly overrides the Base URL.
+TestCLIOverrides verifies that CLI arguments correctly override the configuration.
+
+It ensures that:
+  - The base URL can be overridden.
+  - Scraping depth (maxDepth) can be overridden.
+  - Rate limit can be overridden.
+
+The test **does not rely on exact print statements** to avoid fragility.
 */
-func TestURLOverride(t *testing.T) {
-	output, err := runMainCommand(t, "--config", "configs/default.json", "--url", "https://example.org")
+func TestCLIOverrides(t *testing.T) {
+	// CLI argument values (used multiple times)
+	newBaseURL := "https://cli-example.com"
+	newMaxDepth := "10"
+	newRateLimit := "2.5"
+
+	// Run command
+	output, err := runMainCommand(t,
+		"--url", newBaseURL,
+		"--maxDepth", newMaxDepth,
+		"--rateLimit", newRateLimit,
+	)
 	if err != nil {
-		t.Fatalf("Failed to run main.go with URL override: %v\nOutput: %s", err, output)
+		t.Fatalf("Failed to run main.go with CLI overrides: %v\nOutput: %s", err, output)
 	}
-	if !strings.Contains(output, "Overriding config with URL flag:") {
-		t.Errorf("Expected URL override message not found in output.\nOutput: %s", output)
+
+	// Expected CLI override outputs (used multiple times)
+	expectedOutputs := map[string]string{
+		"Base URL: ":                  newBaseURL,
+		"ScrapingOptions.MaxDepth: ":  newMaxDepth,
+		"ScrapingOptions.RateLimit: ": newRateLimit,
 	}
-	if !strings.Contains(output, "Base URL: https://example.org") {
-		t.Errorf("Expected overridden URL not found in output.\nOutput: %s", output)
+
+	// Validate overrides dynamically
+	for key, expected := range expectedOutputs {
+		if !strings.Contains(output, key+expected) {
+			t.Errorf("Expected override '%s%s' not found in output.\nOutput: %s", key, expected, output)
+		}
 	}
 }
