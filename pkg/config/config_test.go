@@ -296,188 +296,191 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-// TestOverrideConfigFull tests the new OverrideConfig function using the ConfigOverride type.
-// It creates a base config, applies a full override and verifies that all fields have been updated accordingly.
-func TestOverrideConfigFull(t *testing.T) {
-	var captured string
-	patchColored := monkey.Patch(utils.PrintColored, func(a ...interface{}) {
-		captured += fmt.Sprint(a...)
-	})
-	defer patchColored.Unpatch()
+// TestOverrideConfig combines the previous TestOverrideConfigFull and TestOverrideConfigNil into a single test.
+// It verifies that a full override updates all fields and that a nil override leaves the config unchanged.
+func TestOverrideConfig(t *testing.T) {
+	cases := []struct {
+		desc          string
+		overrideSetup func() ConfigOverride
+		validate      func(t *testing.T, base *Config, captured string)
+	}{
+		{
+			desc: "Full override applies all changes",
+			overrideSetup: func() ConfigOverride {
+				return ConfigOverride{
+					Version: ptrString("v2.0"),
+					URL: &struct {
+						Base        *string   `json:"base"`
+						Routes      *[]string `json:"routes"`
+						IncludeBase *bool     `json:"includeBase"`
+					}{
+						Base:        ptrString("https://override.com"),
+						Routes:      &[]string{"/new", "/extra"},
+						IncludeBase: ptrBool(true),
+					},
+					ParseRules: &struct {
+						Title           *string `json:"title,omitempty"`
+						MetaDescription *string `json:"metaDescription,omitempty"`
+						ArticleContent  *string `json:"articleContent,omitempty"`
+						Author          *string `json:"author,omitempty"`
+						DatePublished   *string `json:"datePublished,omitempty"`
+					}{
+						Title:           ptrString("New Title"),
+						MetaDescription: ptrString("New Meta"),
+						ArticleContent:  ptrString("New Content"),
+						Author:          ptrString("New Author"),
+						DatePublished:   ptrString("2022-01-01"),
+					},
+					Storage: &struct {
+						OutputFormats *[]string `json:"outputFormats"`
+						SavePath      *string   `json:"savePath"`
+						FileName      *string   `json:"fileName"`
+					}{
+						OutputFormats: &[]string{"csv"},
+						SavePath:      ptrString("new_output/"),
+						FileName:      ptrString("new_data"),
+					},
+					ScrapingOptions: &struct {
+						MaxDepth      *int     `json:"maxDepth"`
+						RateLimit     *float64 `json:"rateLimit"`
+						RetryAttempts *int     `json:"retryAttempts"`
+						UserAgent     *string  `json:"userAgent"`
+					}{
+						MaxDepth:      ptrInt(5),
+						RateLimit:     ptrFloat64(2.0),
+						RetryAttempts: ptrInt(4),
+						UserAgent:     ptrString("OverrideAgent"),
+					},
+					DataFormatting: &struct {
+						CleanWhitespace *bool `json:"cleanWhitespace"`
+						RemoveHTML      *bool `json:"removeHTML"`
+					}{
+						CleanWhitespace: ptrBool(true),
+						RemoveHTML:      ptrBool(true),
+					},
+				}
+			},
+			validate: func(t *testing.T, base *Config, captured string) {
+				if base.Version != "v2.0" {
+					t.Errorf("Expected Version to be 'v2.0', got '%s'", base.Version)
+				}
+				if base.URL.Base != "https://override.com" {
+					t.Errorf("Expected URL.Base to be 'https://override.com', got '%s'", base.URL.Base)
+				}
+				if !reflect.DeepEqual(base.URL.Routes, []string{"/new", "/extra"}) {
+					t.Errorf("Expected URL.Routes to be ['/new', '/extra'], got %v", base.URL.Routes)
+				}
+				if !base.URL.IncludeBase {
+					t.Errorf("Expected URL.IncludeBase to be true")
+				}
+				if base.ParseRules.Title != "New Title" {
+					t.Errorf("Expected ParseRules.Title to be 'New Title', got '%s'", base.ParseRules.Title)
+				}
+				if base.ParseRules.MetaDescription != "New Meta" {
+					t.Errorf("Expected ParseRules.MetaDescription to be 'New Meta', got '%s'", base.ParseRules.MetaDescription)
+				}
+				if base.ParseRules.ArticleContent != "New Content" {
+					t.Errorf("Expected ParseRules.ArticleContent to be 'New Content', got '%s'", base.ParseRules.ArticleContent)
+				}
+				if base.ParseRules.Author != "New Author" {
+					t.Errorf("Expected ParseRules.Author to be 'New Author', got '%s'", base.ParseRules.Author)
+				}
+				if base.ParseRules.DatePublished != "2022-01-01" {
+					t.Errorf("Expected ParseRules.DatePublished to be '2022-01-01', got '%s'", base.ParseRules.DatePublished)
+				}
+				if !reflect.DeepEqual(base.Storage.OutputFormats, []string{"csv"}) {
+					t.Errorf("Expected Storage.OutputFormats to be ['csv'], got %v", base.Storage.OutputFormats)
+				}
+				if base.Storage.SavePath != "new_output/" {
+					t.Errorf("Expected Storage.SavePath to be 'new_output/', got '%s'", base.Storage.SavePath)
+				}
+				if base.Storage.FileName != "new_data" {
+					t.Errorf("Expected Storage.FileName to be 'new_data', got '%s'", base.Storage.FileName)
+				}
+				if base.ScrapingOptions.MaxDepth != 5 {
+					t.Errorf("Expected ScrapingOptions.MaxDepth to be 5, got %d", base.ScrapingOptions.MaxDepth)
+				}
+				if base.ScrapingOptions.RateLimit != 2.0 {
+					t.Errorf("Expected ScrapingOptions.RateLimit to be 2.0, got %f", base.ScrapingOptions.RateLimit)
+				}
+				if base.ScrapingOptions.RetryAttempts != 4 {
+					t.Errorf("Expected ScrapingOptions.RetryAttempts to be 4, got %d", base.ScrapingOptions.RetryAttempts)
+				}
+				if base.ScrapingOptions.UserAgent != "OverrideAgent" {
+					t.Errorf("Expected ScrapingOptions.UserAgent to be 'OverrideAgent', got '%s'", base.ScrapingOptions.UserAgent)
+				}
+				if !base.DataFormatting.CleanWhitespace {
+					t.Errorf("Expected DataFormatting.CleanWhitespace to be true")
+				}
+				if !base.DataFormatting.RemoveHTML {
+					t.Errorf("Expected DataFormatting.RemoveHTML to be true")
+				}
 
-	// Create a base config with default values.
-	base := &Config{}
-	base.ApplyDefaults()
-
-	// Create an override with non-nil pointers for every field.
-	overrides := ConfigOverride{
-		Version: ptrString("v2.0"),
-		URL: &struct {
-			Base        *string   `json:"base"`
-			Routes      *[]string `json:"routes"`
-			IncludeBase *bool     `json:"includeBase"`
-		}{
-			Base:        ptrString("https://override.com"),
-			Routes:      &[]string{"/new", "/extra"},
-			IncludeBase: ptrBool(true),
+				// Verify that PrintColored was called for each overridden field.
+				expectedSubstrs := []string{
+					"Overriding Version: v2.0",
+					"Overriding URL.Base: https://override.com",
+					"Overriding URL.Routes: [",
+					"Overriding URL.IncludeBase: true",
+					"Overriding ParseRules.Title: New Title",
+					"Overriding ParseRules.MetaDescription: New Meta",
+					"Overriding ParseRules.ArticleContent: New Content",
+					"Overriding ParseRules.Author: New Author",
+					"Overriding ParseRules.DatePublished: 2022-01-01",
+					"Overriding Storage.OutputFormats: [",
+					"Overriding Storage.SavePath: new_output/",
+					"Overriding Storage.FileName: new_data",
+					"Overriding ScrapingOptions.MaxDepth: 5",
+					"Overriding ScrapingOptions.RateLimit: 2",
+					"Overriding ScrapingOptions.RetryAttempts: 4",
+					"Overriding ScrapingOptions.UserAgent: OverrideAgent",
+					"Overriding DataFormatting.CleanWhitespace: true",
+					"Overriding DataFormatting.RemoveHTML: true",
+				}
+				for _, substr := range expectedSubstrs {
+					if !strings.Contains(captured, substr) {
+						t.Errorf("Expected output to contain '%s', got '%s'", substr, captured)
+					}
+				}
+			},
 		},
-		ParseRules: &struct {
-			Title           *string `json:"title,omitempty"`
-			MetaDescription *string `json:"metaDescription,omitempty"`
-			ArticleContent  *string `json:"articleContent,omitempty"`
-			Author          *string `json:"author,omitempty"`
-			DatePublished   *string `json:"datePublished,omitempty"`
-		}{
-			Title:           ptrString("New Title"),
-			MetaDescription: ptrString("New Meta"),
-			ArticleContent:  ptrString("New Content"),
-			Author:          ptrString("New Author"),
-			DatePublished:   ptrString("2022-01-01"),
-		},
-		Storage: &struct {
-			OutputFormats *[]string `json:"outputFormats"`
-			SavePath      *string   `json:"savePath"`
-			FileName      *string   `json:"fileName"`
-		}{
-			OutputFormats: &[]string{"csv"},
-			SavePath:      ptrString("new_output/"),
-			FileName:      ptrString("new_data"),
-		},
-		ScrapingOptions: &struct {
-			MaxDepth      *int     `json:"maxDepth"`
-			RateLimit     *float64 `json:"rateLimit"`
-			RetryAttempts *int     `json:"retryAttempts"`
-			UserAgent     *string  `json:"userAgent"`
-		}{
-			MaxDepth:      ptrInt(5),
-			RateLimit:     ptrFloat64(2.0),
-			RetryAttempts: ptrInt(4),
-			UserAgent:     ptrString("OverrideAgent"),
-		},
-		DataFormatting: &struct {
-			CleanWhitespace *bool `json:"cleanWhitespace"`
-			RemoveHTML      *bool `json:"removeHTML"`
-		}{
-			CleanWhitespace: ptrBool(true),
-			RemoveHTML:      ptrBool(true),
+		{
+			desc: "Nil override leaves config unchanged",
+			overrideSetup: func() ConfigOverride {
+				return ConfigOverride{}
+			},
+			validate: func(t *testing.T, base *Config, captured string) {
+				// Build a default config to compare.
+				defaultConfig := &Config{}
+				defaultConfig.ApplyDefaults()
+				if !reflect.DeepEqual(base, defaultConfig) {
+					t.Errorf("Expected config to remain unchanged when overrides are nil. Got %+v, expected %+v", base, defaultConfig)
+				}
+				// No PrintColored calls should be made.
+				if captured != "" {
+					t.Errorf("Expected no output from PrintColored when no overrides are applied, got '%s'", captured)
+				}
+			},
 		},
 	}
 
-	// Apply the override.
-	base.OverrideConfig(overrides)
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			var captured string
+			patchColored := monkey.Patch(utils.PrintColored, func(a ...interface{}) {
+				captured += fmt.Sprint(a...)
+			})
+			defer patchColored.Unpatch()
 
-	// Verify that each field has been updated.
-	if base.Version != "v2.0" {
-		t.Errorf("Expected Version to be 'v2.0', got '%s'", base.Version)
-	}
-	if base.URL.Base != "https://override.com" {
-		t.Errorf("Expected URL.Base to be 'https://override.com', got '%s'", base.URL.Base)
-	}
-	if !reflect.DeepEqual(base.URL.Routes, []string{"/new", "/extra"}) {
-		t.Errorf("Expected URL.Routes to be ['/new', '/extra'], got %v", base.URL.Routes)
-	}
-	if !base.URL.IncludeBase {
-		t.Errorf("Expected URL.IncludeBase to be true")
-	}
-	if base.ParseRules.Title != "New Title" {
-		t.Errorf("Expected ParseRules.Title to be 'New Title', got '%s'", base.ParseRules.Title)
-	}
-	if base.ParseRules.MetaDescription != "New Meta" {
-		t.Errorf("Expected ParseRules.MetaDescription to be 'New Meta', got '%s'", base.ParseRules.MetaDescription)
-	}
-	if base.ParseRules.ArticleContent != "New Content" {
-		t.Errorf("Expected ParseRules.ArticleContent to be 'New Content', got '%s'", base.ParseRules.ArticleContent)
-	}
-	if base.ParseRules.Author != "New Author" {
-		t.Errorf("Expected ParseRules.Author to be 'New Author', got '%s'", base.ParseRules.Author)
-	}
-	if base.ParseRules.DatePublished != "2022-01-01" {
-		t.Errorf("Expected ParseRules.DatePublished to be '2022-01-01', got '%s'", base.ParseRules.DatePublished)
-	}
-	if !reflect.DeepEqual(base.Storage.OutputFormats, []string{"csv"}) {
-		t.Errorf("Expected Storage.OutputFormats to be ['csv'], got %v", base.Storage.OutputFormats)
-	}
-	if base.Storage.SavePath != "new_output/" {
-		t.Errorf("Expected Storage.SavePath to be 'new_output/', got '%s'", base.Storage.SavePath)
-	}
-	if base.Storage.FileName != "new_data" {
-		t.Errorf("Expected Storage.FileName to be 'new_data', got '%s'", base.Storage.FileName)
-	}
-	if base.ScrapingOptions.MaxDepth != 5 {
-		t.Errorf("Expected ScrapingOptions.MaxDepth to be 5, got %d", base.ScrapingOptions.MaxDepth)
-	}
-	if base.ScrapingOptions.RateLimit != 2.0 {
-		t.Errorf("Expected ScrapingOptions.RateLimit to be 2.0, got %f", base.ScrapingOptions.RateLimit)
-	}
-	if base.ScrapingOptions.RetryAttempts != 4 {
-		t.Errorf("Expected ScrapingOptions.RetryAttempts to be 4, got %d", base.ScrapingOptions.RetryAttempts)
-	}
-	if base.ScrapingOptions.UserAgent != "OverrideAgent" {
-		t.Errorf("Expected ScrapingOptions.UserAgent to be 'OverrideAgent', got '%s'", base.ScrapingOptions.UserAgent)
-	}
-	if !base.DataFormatting.CleanWhitespace {
-		t.Errorf("Expected DataFormatting.CleanWhitespace to be true")
-	}
-	if !base.DataFormatting.RemoveHTML {
-		t.Errorf("Expected DataFormatting.RemoveHTML to be true")
-	}
+			// Create a base config with defaults applied.
+			base := &Config{}
+			base.ApplyDefaults()
 
-	// Optionally, you can verify that PrintColored was called for each overridden field.
-	expectedSubstrs := []string{
-		"Overriding Version: v2.0",
-		"Overriding URL.Base: https://override.com",
-		"Overriding URL.Routes: [",
-		"Overriding URL.IncludeBase: true",
-		"Overriding ParseRules.Title: New Title",
-		"Overriding ParseRules.MetaDescription: New Meta",
-		"Overriding ParseRules.ArticleContent: New Content",
-		"Overriding ParseRules.Author: New Author",
-		"Overriding ParseRules.DatePublished: 2022-01-01",
-		"Overriding Storage.OutputFormats: [",
-		"Overriding Storage.SavePath: new_output/",
-		"Overriding Storage.FileName: new_data",
-		"Overriding ScrapingOptions.MaxDepth: 5",
-		"Overriding ScrapingOptions.RateLimit: 2",
-		"Overriding ScrapingOptions.RetryAttempts: 4",
-		"Overriding ScrapingOptions.UserAgent: OverrideAgent",
-		"Overriding DataFormatting.CleanWhitespace: true",
-		"Overriding DataFormatting.RemoveHTML: true",
-	}
-	for _, substr := range expectedSubstrs {
-		if !strings.Contains(captured, substr) {
-			t.Errorf("Expected output to contain '%s', got '%s'", substr, captured)
-		}
-	}
-}
+			// Apply the override from this test case.
+			override := tc.overrideSetup()
+			base.OverrideConfig(override)
 
-// TestOverrideConfigNil tests that passing a ConfigOverride with all nil values does not change the config.
-func TestOverrideConfigNil(t *testing.T) {
-	var captured string
-	patchColored := monkey.Patch(utils.PrintColored, func(a ...interface{}) {
-		captured += fmt.Sprint(a...)
-	})
-	defer patchColored.Unpatch()
-
-	// Create a base config with default values.
-	base := &Config{}
-	base.ApplyDefaults()
-
-	// Create an override with all nil pointers.
-	overrides := ConfigOverride{}
-
-	// Apply the override.
-	base.OverrideConfig(overrides)
-
-	// Verify that no fields have changed (i.e. remain equal to their defaults).
-	defaultConfig := &Config{}
-	defaultConfig.ApplyDefaults()
-
-	if !reflect.DeepEqual(base, defaultConfig) {
-		t.Errorf("Expected config to remain unchanged when overrides are nil. Got %+v, expected %+v", base, defaultConfig)
-	}
-
-	// Since nothing is overridden, captured output should be empty.
-	if captured != "" {
-		t.Errorf("Expected no output from PrintColored when no overrides are applied, got '%s'", captured)
+			tc.validate(t, base, captured)
+		})
 	}
 }
