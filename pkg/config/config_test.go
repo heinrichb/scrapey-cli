@@ -13,28 +13,29 @@ import (
 	"github.com/heinrichb/scrapey-cli/pkg/utils"
 )
 
+// Helper functions to easily create pointer values.
+func ptrString(s string) *string    { return &s }
+func ptrInt(i int) *int             { return &i }
+func ptrFloat64(f float64) *float64 { return &f }
+func ptrBool(b bool) *bool          { return &b }
+
 // TestApplyDefaults tests the ApplyDefaults function to ensure that missing fields are set to default values.
-// This test function uses multiple cases to verify that defaults are correctly applied.
 func TestApplyDefaults(t *testing.T) {
 	cases := []struct {
 		desc     string
-		setup    func(cfg *Config) // Optionally pre-set some fields.
+		setup    func(cfg *Config)
 		validate func(t *testing.T, cfg *Config)
 	}{
 		{
-			desc: "All fields missing should be set to defaults",
-			setup: func(cfg *Config) {
-				// Leave all fields at their zero values.
-			},
+			desc:  "All fields missing should be set to defaults",
+			setup: func(cfg *Config) {},
 			validate: func(t *testing.T, cfg *Config) {
-				// Check URL defaults.
 				if cfg.URL.Base != "https://example.com" {
 					t.Errorf("Expected URL.Base to be 'https://example.com', got '%s'", cfg.URL.Base)
 				}
 				if len(cfg.URL.Routes) != 1 || cfg.URL.Routes[0] != "/" {
 					t.Errorf("Expected URL.Routes to be ['/'], got %v", cfg.URL.Routes)
 				}
-				// Check ScrapingOptions defaults.
 				if cfg.ScrapingOptions.MaxDepth != 2 {
 					t.Errorf("Expected ScrapingOptions.MaxDepth to be 2, got %d", cfg.ScrapingOptions.MaxDepth)
 				}
@@ -48,7 +49,6 @@ func TestApplyDefaults(t *testing.T) {
 				if cfg.ScrapingOptions.UserAgent != expectedUA {
 					t.Errorf("Expected ScrapingOptions.UserAgent to be '%s', got '%s'", expectedUA, cfg.ScrapingOptions.UserAgent)
 				}
-				// Check Storage defaults.
 				if len(cfg.Storage.OutputFormats) != 1 || cfg.Storage.OutputFormats[0] != "json" {
 					t.Errorf("Expected Storage.OutputFormats to be ['json'], got %v", cfg.Storage.OutputFormats)
 				}
@@ -63,19 +63,16 @@ func TestApplyDefaults(t *testing.T) {
 		{
 			desc: "Pre-set fields remain unchanged and missing fields get defaults",
 			setup: func(cfg *Config) {
-				// Pre-set some fields.
 				cfg.URL.Base = "https://preset.com"
 				cfg.Storage.SavePath = "custom_output/"
 			},
 			validate: func(t *testing.T, cfg *Config) {
-				// Pre-set values should be retained.
 				if cfg.URL.Base != "https://preset.com" {
 					t.Errorf("Expected URL.Base to be 'https://preset.com', got '%s'", cfg.URL.Base)
 				}
 				if cfg.Storage.SavePath != "custom_output/" {
 					t.Errorf("Expected Storage.SavePath to be 'custom_output/', got '%s'", cfg.Storage.SavePath)
 				}
-				// Other fields should be set to defaults.
 				if len(cfg.URL.Routes) != 1 || cfg.URL.Routes[0] != "/" {
 					t.Errorf("Expected URL.Routes to be ['/'], got %v", cfg.URL.Routes)
 				}
@@ -93,7 +90,6 @@ func TestApplyDefaults(t *testing.T) {
 		{
 			desc: "No change if all fields are pre-set",
 			setup: func(cfg *Config) {
-				// Set all fields explicitly.
 				cfg.URL.Base = "https://preset.com"
 				cfg.URL.Routes = []string{"/preset"}
 				cfg.ScrapingOptions.MaxDepth = 10
@@ -105,7 +101,6 @@ func TestApplyDefaults(t *testing.T) {
 				cfg.Storage.FileName = "preset_data"
 			},
 			validate: func(t *testing.T, cfg *Config) {
-				// Expect all pre-set fields to remain unchanged.
 				if cfg.URL.Base != "https://preset.com" {
 					t.Errorf("Expected URL.Base to be 'https://preset.com', got '%s'", cfg.URL.Base)
 				}
@@ -140,23 +135,17 @@ func TestApplyDefaults(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			cfg := &Config{}
-			// Allow test-specific pre-setup.
 			if tc.setup != nil {
 				tc.setup(cfg)
 			}
-			// Call ApplyDefaults.
 			cfg.ApplyDefaults()
-			// Validate that defaults have been applied as expected.
 			tc.validate(t, cfg)
 		})
 	}
 }
 
-// TestLoad tests the Load function in a single function with multiple cases.
-// We cover scenarios like missing file, unreadable file, invalid JSON,
-// and valid JSON with verbose mode on/off.
+// TestLoad tests the Load function with various file conditions.
 func TestLoad(t *testing.T) {
-	// Patch utils.PrintColored and utils.PrintNonEmptyFields.
 	var capturedColored string
 	patchColored := monkey.Patch(utils.PrintColored, func(a ...interface{}) {
 		capturedColored += fmt.Sprint(a...)
@@ -169,21 +158,19 @@ func TestLoad(t *testing.T) {
 	})
 	defer patchNonEmpty.Unpatch()
 
-	// Define table test cases for Load.
 	cases := []struct {
 		desc        string
-		fileSetup   func(fileName string) // Setup the file (write contents, change permissions)
-		verbose     bool                  // Set global Verbose before calling Load.
-		expectErr   bool                  // Expect Load() to return an error.
+		fileSetup   func(fileName string)
+		verbose     bool
+		expectErr   bool
 		checkOutput func(t *testing.T, colored, nonEmpty string)
 	}{
 		{
 			desc:      "Missing config file",
-			fileSetup: nil, // Do not create the file so that it is missing.
+			fileSetup: nil,
 			verbose:   false,
 			expectErr: true,
 			checkOutput: func(t *testing.T, colored, nonEmpty string) {
-				// For a missing file, no printing should occur.
 				if colored != "" {
 					t.Errorf("Expected no colored output for missing file, got: %s", colored)
 				}
@@ -192,16 +179,13 @@ func TestLoad(t *testing.T) {
 		{
 			desc: "Unreadable config file",
 			fileSetup: func(name string) {
-				// Create a file with valid JSON.
 				if err := os.WriteFile(name, []byte(`{"url": {"base": "http://example.org"}}`), 0644); err != nil {
 					t.Fatalf("Failed to write file: %v", err)
 				}
-				// We'll patch os.ReadFile below to simulate a read error.
 			},
 			verbose:   false,
 			expectErr: true,
 			checkOutput: func(t *testing.T, colored, nonEmpty string) {
-				// Expect that PrintColored is called.
 				if !strings.Contains(colored, "Loaded config from: ") {
 					t.Errorf("Expected colored output, got: %s", colored)
 				}
@@ -210,7 +194,6 @@ func TestLoad(t *testing.T) {
 		{
 			desc: "Invalid JSON format",
 			fileSetup: func(name string) {
-				// Write invalid JSON.
 				if err := os.WriteFile(name, []byte(`{"url": {"base": "http://example.org"`), 0644); err != nil {
 					t.Fatalf("Failed to write file: %v", err)
 				}
@@ -218,7 +201,6 @@ func TestLoad(t *testing.T) {
 			verbose:   false,
 			expectErr: true,
 			checkOutput: func(t *testing.T, colored, nonEmpty string) {
-				// Even with invalid JSON, colored output should be produced.
 				if !strings.Contains(colored, "Loaded config from: ") {
 					t.Errorf("Expected colored output, got: %s", colored)
 				}
@@ -227,7 +209,6 @@ func TestLoad(t *testing.T) {
 		{
 			desc: "Valid JSON without verbose mode",
 			fileSetup: func(name string) {
-				// Write valid minimal JSON.
 				if err := os.WriteFile(name, []byte(`{"url": {"base": "http://example.org"}}`), 0644); err != nil {
 					t.Fatalf("Failed to write file: %v", err)
 				}
@@ -235,7 +216,6 @@ func TestLoad(t *testing.T) {
 			verbose:   false,
 			expectErr: false,
 			checkOutput: func(t *testing.T, colored, nonEmpty string) {
-				// When verbose is false, only colored output is expected.
 				if !strings.Contains(colored, "Loaded config from: ") {
 					t.Errorf("Expected colored output, got: %s", colored)
 				}
@@ -247,7 +227,6 @@ func TestLoad(t *testing.T) {
 		{
 			desc: "Valid JSON with verbose mode",
 			fileSetup: func(name string) {
-				// Write valid minimal JSON.
 				if err := os.WriteFile(name, []byte(`{"url": {"base": "http://example.org"}}`), 0644); err != nil {
 					t.Fatalf("Failed to write file: %v", err)
 				}
@@ -255,7 +234,6 @@ func TestLoad(t *testing.T) {
 			verbose:   true,
 			expectErr: false,
 			checkOutput: func(t *testing.T, colored, nonEmpty string) {
-				// With verbose mode on, both colored and non-empty outputs should be present.
 				if !strings.Contains(colored, "Loaded config from: ") {
 					t.Errorf("Expected colored output, got: %s", colored)
 				}
@@ -266,22 +244,16 @@ func TestLoad(t *testing.T) {
 		},
 	}
 
-	// Run test cases.
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			// Reset captured outputs.
 			capturedColored = ""
-			// Reset capturedNonEmpty inside the patch by re-patching.
 			patchNonEmpty.Unpatch()
 			patchNonEmpty = monkey.Patch(utils.PrintNonEmptyFields, func(prefix string, cfg interface{}) {
 				capturedNonEmpty += "nonEmptyFieldsCalled"
 			})
 			defer patchNonEmpty.Unpatch()
-
-			// Set the global Verbose flag as needed.
 			Verbose = tc.verbose
 
-			// Prepare file. If no setup, use a name that does not exist.
 			var fileName string
 			if tc.fileSetup != nil {
 				tmpFile, err := os.CreateTemp("", "config_*.json")
@@ -289,16 +261,14 @@ func TestLoad(t *testing.T) {
 					t.Fatalf("Failed to create temp file: %v", err)
 				}
 				fileName = tmpFile.Name()
-				tmpFile.Close() // Close so that file can be manipulated.
+				tmpFile.Close()
 				tc.fileSetup(fileName)
-				// For cleanup and permission safety.
 				os.Chmod(fileName, 0644)
 				defer os.Remove(fileName)
 			} else {
 				fileName = "nonexistent_config.json"
 			}
 
-			// For the unreadable file test, patch os.ReadFile to simulate a read error.
 			if tc.desc == "Unreadable config file" {
 				patchReadFile := monkey.Patch(os.ReadFile, func(name string) ([]byte, error) {
 					return nil, fmt.Errorf("simulated read error")
@@ -311,7 +281,6 @@ func TestLoad(t *testing.T) {
 				if err == nil {
 					t.Errorf("Expected error but got nil")
 				}
-				// Skip further checks if error was expected.
 				return
 			} else {
 				if err != nil {
@@ -319,162 +288,196 @@ func TestLoad(t *testing.T) {
 					return
 				}
 			}
-
-			// Ensure ApplyDefaults populated required fields (e.g. URL.Base).
 			if cfg.URL.Base == "" {
 				t.Errorf("Expected URL.Base to be set, got empty")
 			}
-			// Validate captured output.
 			tc.checkOutput(t, capturedColored, capturedNonEmpty)
 		})
 	}
 }
 
-// TestOverrideConfig tests the OverrideConfig function in a single function with multiple cases.
-// We patch utils.PrintColored to capture its output in a global variable.
-// In addition to our previous override cases, we add tests for empty-slice overrides,
-// for when no override is applied, and for non-struct fields (like the new Version field).
-func TestOverrideConfig(t *testing.T) {
-	// Patch utils.PrintColored to capture printed messages.
+// TestOverrideConfigFull tests the new OverrideConfig function using the ConfigOverride type.
+// It creates a base config, applies a full override and verifies that all fields have been updated accordingly.
+func TestOverrideConfigFull(t *testing.T) {
 	var captured string
 	patchColored := monkey.Patch(utils.PrintColored, func(a ...interface{}) {
 		captured += fmt.Sprint(a...)
 	})
 	defer patchColored.Unpatch()
 
-	// Define table test cases for OverrideConfig.
-	cases := []struct {
-		desc         string
-		override     Config
-		preSetup     func(*Config)      // Optionally modify the initial config.
-		expectFunc   func(*Config) bool // Checks that the override was applied.
-		expectOutput string             // Expected substring in the printed output.
-	}{
-		{
-			desc: "Override URL.Base",
-			override: Config{
-				URL: struct {
-					Base        string   `json:"base"`
-					Routes      []string `json:"routes"`
-					IncludeBase bool     `json:"includeBase"`
-				}{Base: "https://override.com"},
-			},
-			preSetup: nil,
-			expectFunc: func(c *Config) bool {
-				return c.URL.Base == "https://override.com"
-			},
-			expectOutput: "Overriding URL.Base: ",
+	// Create a base config with default values.
+	base := &Config{}
+	base.ApplyDefaults()
+
+	// Create an override with non-nil pointers for every field.
+	overrides := ConfigOverride{
+		Version: ptrString("v2.0"),
+		URL: &struct {
+			Base        *string   `json:"base"`
+			Routes      *[]string `json:"routes"`
+			IncludeBase *bool     `json:"includeBase"`
+		}{
+			Base:        ptrString("https://override.com"),
+			Routes:      &[]string{"/new", "/extra"},
+			IncludeBase: ptrBool(true),
 		},
-		{
-			desc: "Override non-empty slice",
-			override: Config{
-				Storage: struct {
-					OutputFormats []string `json:"outputFormats"`
-					SavePath      string   `json:"savePath"`
-					FileName      string   `json:"fileName"`
-				}{OutputFormats: []string{"csv"}},
-			},
-			preSetup: func(c *Config) {
-				c.Storage.OutputFormats = []string{"json"}
-			},
-			expectFunc: func(c *Config) bool {
-				return reflect.DeepEqual(c.Storage.OutputFormats, []string{"csv"})
-			},
-			expectOutput: "Overriding Storage.OutputFormats: ",
+		ParseRules: &struct {
+			Title           *string `json:"title,omitempty"`
+			MetaDescription *string `json:"metaDescription,omitempty"`
+			ArticleContent  *string `json:"articleContent,omitempty"`
+			Author          *string `json:"author,omitempty"`
+			DatePublished   *string `json:"datePublished,omitempty"`
+		}{
+			Title:           ptrString("New Title"),
+			MetaDescription: ptrString("New Meta"),
+			ArticleContent:  ptrString("New Content"),
+			Author:          ptrString("New Author"),
+			DatePublished:   ptrString("2022-01-01"),
 		},
-		{
-			desc: "Override boolean",
-			override: Config{
-				URL: struct {
-					Base        string   `json:"base"`
-					Routes      []string `json:"routes"`
-					IncludeBase bool     `json:"includeBase"`
-				}{IncludeBase: true},
-			},
-			preSetup:     nil,
-			expectFunc:   func(c *Config) bool { return c.URL.IncludeBase },
-			expectOutput: "Overriding URL.IncludeBase: ",
+		Storage: &struct {
+			OutputFormats *[]string `json:"outputFormats"`
+			SavePath      *string   `json:"savePath"`
+			FileName      *string   `json:"fileName"`
+		}{
+			OutputFormats: &[]string{"csv"},
+			SavePath:      ptrString("new_output/"),
+			FileName:      ptrString("new_data"),
 		},
-		{
-			desc: "Override multiple values",
-			override: Config{
-				URL: struct {
-					Base        string   `json:"base"`
-					Routes      []string `json:"routes"`
-					IncludeBase bool     `json:"includeBase"`
-				}{
-					Base:        "https://multiple.com",
-					Routes:      []string{"/new"},
-					IncludeBase: true,
-				},
-				ScrapingOptions: struct {
-					MaxDepth      int     `json:"maxDepth"`
-					RateLimit     float64 `json:"rateLimit"`
-					RetryAttempts int     `json:"retryAttempts"`
-					UserAgent     string  `json:"userAgent"`
-				}{MaxDepth: 5},
-			},
-			preSetup: nil,
-			expectFunc: func(c *Config) bool {
-				return c.URL.Base == "https://multiple.com" && c.ScrapingOptions.MaxDepth == 5
-			},
-			expectOutput: "Overriding URL.Base: ",
+		ScrapingOptions: &struct {
+			MaxDepth      *int     `json:"maxDepth"`
+			RateLimit     *float64 `json:"rateLimit"`
+			RetryAttempts *int     `json:"retryAttempts"`
+			UserAgent     *string  `json:"userAgent"`
+		}{
+			MaxDepth:      ptrInt(5),
+			RateLimit:     ptrFloat64(2.0),
+			RetryAttempts: ptrInt(4),
+			UserAgent:     ptrString("OverrideAgent"),
 		},
-		{
-			desc: "Override empty slice (applies override)",
-			override: Config{
-				Storage: struct {
-					OutputFormats []string `json:"outputFormats"`
-					SavePath      string   `json:"savePath"`
-					FileName      string   `json:"fileName"`
-				}{OutputFormats: []string{}}, // Even empty slice should override.
-			},
-			preSetup: func(c *Config) {
-				c.Storage.OutputFormats = []string{"json"}
-			},
-			expectFunc: func(c *Config) bool {
-				// Expect the override to apply, resulting in an empty slice.
-				return reflect.DeepEqual(c.Storage.OutputFormats, []string{})
-			},
-			expectOutput: "Overriding Storage.OutputFormats: ",
-		},
-		{
-			desc: "Override non-struct field (Version)",
-			override: Config{
-				Version: "v2.0",
-			},
-			preSetup: func(c *Config) {
-				c.Version = "v1.0"
-			},
-			expectFunc: func(c *Config) bool {
-				// Expect the version to be overridden to "v2.0".
-				return c.Version == "v2.0"
-			},
-			expectOutput: "Overriding Version: ",
+		DataFormatting: &struct {
+			CleanWhitespace *bool `json:"cleanWhitespace"`
+			RemoveHTML      *bool `json:"removeHTML"`
+		}{
+			CleanWhitespace: ptrBool(true),
+			RemoveHTML:      ptrBool(true),
 		},
 	}
 
-	// Run test cases.
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			captured = "" // Reset captured output.
-			// Create a fresh config with defaults applied.
-			testCfg := &Config{}
-			testCfg.ApplyDefaults()
-			if tc.preSetup != nil {
-				tc.preSetup(testCfg)
-			}
+	// Apply the override.
+	base.OverrideConfig(overrides)
 
-			// Apply the override.
-			testCfg.OverrideConfig(tc.override)
-			// Verify that the override was applied.
-			if !tc.expectFunc(testCfg) {
-				t.Errorf("Expected override condition not met. Got %+v", testCfg)
-			}
-			// Verify that PrintColored was called with the expected message.
-			if !strings.Contains(captured, tc.expectOutput) {
-				t.Errorf("Expected output to contain '%s', got '%s'", tc.expectOutput, captured)
-			}
-		})
+	// Verify that each field has been updated.
+	if base.Version != "v2.0" {
+		t.Errorf("Expected Version to be 'v2.0', got '%s'", base.Version)
+	}
+	if base.URL.Base != "https://override.com" {
+		t.Errorf("Expected URL.Base to be 'https://override.com', got '%s'", base.URL.Base)
+	}
+	if !reflect.DeepEqual(base.URL.Routes, []string{"/new", "/extra"}) {
+		t.Errorf("Expected URL.Routes to be ['/new', '/extra'], got %v", base.URL.Routes)
+	}
+	if !base.URL.IncludeBase {
+		t.Errorf("Expected URL.IncludeBase to be true")
+	}
+	if base.ParseRules.Title != "New Title" {
+		t.Errorf("Expected ParseRules.Title to be 'New Title', got '%s'", base.ParseRules.Title)
+	}
+	if base.ParseRules.MetaDescription != "New Meta" {
+		t.Errorf("Expected ParseRules.MetaDescription to be 'New Meta', got '%s'", base.ParseRules.MetaDescription)
+	}
+	if base.ParseRules.ArticleContent != "New Content" {
+		t.Errorf("Expected ParseRules.ArticleContent to be 'New Content', got '%s'", base.ParseRules.ArticleContent)
+	}
+	if base.ParseRules.Author != "New Author" {
+		t.Errorf("Expected ParseRules.Author to be 'New Author', got '%s'", base.ParseRules.Author)
+	}
+	if base.ParseRules.DatePublished != "2022-01-01" {
+		t.Errorf("Expected ParseRules.DatePublished to be '2022-01-01', got '%s'", base.ParseRules.DatePublished)
+	}
+	if !reflect.DeepEqual(base.Storage.OutputFormats, []string{"csv"}) {
+		t.Errorf("Expected Storage.OutputFormats to be ['csv'], got %v", base.Storage.OutputFormats)
+	}
+	if base.Storage.SavePath != "new_output/" {
+		t.Errorf("Expected Storage.SavePath to be 'new_output/', got '%s'", base.Storage.SavePath)
+	}
+	if base.Storage.FileName != "new_data" {
+		t.Errorf("Expected Storage.FileName to be 'new_data', got '%s'", base.Storage.FileName)
+	}
+	if base.ScrapingOptions.MaxDepth != 5 {
+		t.Errorf("Expected ScrapingOptions.MaxDepth to be 5, got %d", base.ScrapingOptions.MaxDepth)
+	}
+	if base.ScrapingOptions.RateLimit != 2.0 {
+		t.Errorf("Expected ScrapingOptions.RateLimit to be 2.0, got %f", base.ScrapingOptions.RateLimit)
+	}
+	if base.ScrapingOptions.RetryAttempts != 4 {
+		t.Errorf("Expected ScrapingOptions.RetryAttempts to be 4, got %d", base.ScrapingOptions.RetryAttempts)
+	}
+	if base.ScrapingOptions.UserAgent != "OverrideAgent" {
+		t.Errorf("Expected ScrapingOptions.UserAgent to be 'OverrideAgent', got '%s'", base.ScrapingOptions.UserAgent)
+	}
+	if !base.DataFormatting.CleanWhitespace {
+		t.Errorf("Expected DataFormatting.CleanWhitespace to be true")
+	}
+	if !base.DataFormatting.RemoveHTML {
+		t.Errorf("Expected DataFormatting.RemoveHTML to be true")
+	}
+
+	// Optionally, you can verify that PrintColored was called for each overridden field.
+	expectedSubstrs := []string{
+		"Overriding Version: v2.0",
+		"Overriding URL.Base: https://override.com",
+		"Overriding URL.Routes: [",
+		"Overriding URL.IncludeBase: true",
+		"Overriding ParseRules.Title: New Title",
+		"Overriding ParseRules.MetaDescription: New Meta",
+		"Overriding ParseRules.ArticleContent: New Content",
+		"Overriding ParseRules.Author: New Author",
+		"Overriding ParseRules.DatePublished: 2022-01-01",
+		"Overriding Storage.OutputFormats: [",
+		"Overriding Storage.SavePath: new_output/",
+		"Overriding Storage.FileName: new_data",
+		"Overriding ScrapingOptions.MaxDepth: 5",
+		"Overriding ScrapingOptions.RateLimit: 2",
+		"Overriding ScrapingOptions.RetryAttempts: 4",
+		"Overriding ScrapingOptions.UserAgent: OverrideAgent",
+		"Overriding DataFormatting.CleanWhitespace: true",
+		"Overriding DataFormatting.RemoveHTML: true",
+	}
+	for _, substr := range expectedSubstrs {
+		if !strings.Contains(captured, substr) {
+			t.Errorf("Expected output to contain '%s', got '%s'", substr, captured)
+		}
+	}
+}
+
+// TestOverrideConfigNil tests that passing a ConfigOverride with all nil values does not change the config.
+func TestOverrideConfigNil(t *testing.T) {
+	var captured string
+	patchColored := monkey.Patch(utils.PrintColored, func(a ...interface{}) {
+		captured += fmt.Sprint(a...)
+	})
+	defer patchColored.Unpatch()
+
+	// Create a base config with default values.
+	base := &Config{}
+	base.ApplyDefaults()
+
+	// Create an override with all nil pointers.
+	overrides := ConfigOverride{}
+
+	// Apply the override.
+	base.OverrideConfig(overrides)
+
+	// Verify that no fields have changed (i.e. remain equal to their defaults).
+	defaultConfig := &Config{}
+	defaultConfig.ApplyDefaults()
+
+	if !reflect.DeepEqual(base, defaultConfig) {
+		t.Errorf("Expected config to remain unchanged when overrides are nil. Got %+v, expected %+v", base, defaultConfig)
+	}
+
+	// Since nothing is overridden, captured output should be empty.
+	if captured != "" {
+		t.Errorf("Expected no output from PrintColored when no overrides are applied, got '%s'", captured)
 	}
 }
