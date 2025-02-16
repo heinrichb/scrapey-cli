@@ -4,7 +4,7 @@ name: Continuous Integration (CI)
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ["*"]
   pull_request:
     branches: ["main", "develop"]
 
@@ -33,11 +33,19 @@ jobs:
       - name: 🛠️ Build
         run: go build ./...
 
-      - name: 🧪 Test
-        run: go test -v ./... -coverprofile=coverage.out
+      - name: 🧪 Run Tests with Coverage
+        run: |
+          go test -v ./... -coverprofile=coverage.out | tee test-results.log
 
       - name: 📤 Upload Coverage Reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out
+
+      - name: 📜 Upload Test Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.log
