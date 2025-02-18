@@ -1,13 +1,16 @@
-name: CI
+# File: .github/workflows/ci.yml
+
+name: Continuous Integration (CI)
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ["*"]
   pull_request:
     branches: ["main", "develop"]
 
 jobs:
   build-and-test:
+    name: 🔨 Build and Test
     runs-on: ubuntu-latest
 
     steps:
@@ -19,8 +22,31 @@ jobs:
         with:
           go-version: "1.23"
 
-      - name: 🏃 Build
+      - name: 📦 Check go.sum consistency
+        run: |
+          go mod tidy
+          if ! git diff --exit-code go.sum; then
+            echo "go.sum is not up-to-date. Please run 'go mod tidy' and commit the changes."
+            exit 1
+          fi
+
+      - name: 🛠️ Build
         run: go build ./...
 
-      - name: 🧪 Test
-        run: go test -v ./...
+      - name: 🧪 Run Tests with Coverage
+        run: |
+          go test -v ./... -coverprofile=coverage.out | tee test-results.log
+          grep -v "cmd/scrapeycli/main.go:" coverage.out > tmp && mv tmp coverage.out
+
+      - name: 📤 Upload Coverage Reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.out
+
+      - name: 📜 Upload Test Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.log
