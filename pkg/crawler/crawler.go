@@ -2,6 +2,13 @@
 
 package crawler
 
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
+)
+
 /*
 Crawler is responsible for fetching HTML content from URLs.
 
@@ -53,5 +60,34 @@ Notes:
 */
 func (c *Crawler) FetchURL(url string) (string, error) {
 	// Stub: return placeholder HTML or empty string for now.
-	return "", nil
+	client := &http.Client{
+		Timeout: 10 * time.Second, // Set timeout
+	}
+
+	// jsonData := `{"key":"value"}`
+
+	// Create a custom request
+	// req, err := http.NewRequest("Post", url, bytes.NewBuffer([]byte(jsonData)))
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Printf("Error creating request: %v\n", err)
+		return "", err
+	}
+	// req.Header.Set("Content-Type", "application/json") // Set headers
+
+	// Send the request
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error sending request: %v\n", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Read and print the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Error reading response body: %v\n", err)
+		return "", err
+	}
+	return string(body), nil
 }
