@@ -70,7 +70,7 @@ test:
 		SUBMODULES=$$(git config --file .gitmodules --get-regexp path | awk '{print $$2}'); \
 		PKGS=$$(go list ./... | grep -vF "$$SUBMODULES"); \
 		if gotestsum --format short-verbose $$PKGS && \
-		   go test -cover -covermode=atomic -coverpkg=$$(echo $$PKGS | tr ' ' ',') -coverprofile="$(COVER_PROFILE)" $$PKGS >/dev/null; then \
+		    go test -cover -covermode=atomic -coverpkg=$$(echo $$PKGS | tr ' ' ',') -coverprofile="$(COVER_PROFILE)" $$PKGS >/dev/null; then \
 			if [ -f "$(COVER_PROFILE)" ]; then \
 				echo "$$SUBMODULES" | while read SUBMODULE; do \
 					grep -v "$$SUBMODULE" "$(COVER_PROFILE)" > "$(COVER_PROFILE).tmp" && mv "$(COVER_PROFILE).tmp" "$(COVER_PROFILE)"; \
