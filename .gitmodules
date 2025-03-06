@@ -1,0 +1,4 @@
+[submodule "scripts/go_coverage_formatter"]
+	path = scripts/go_coverage_formatter
+	url = https://github.com/heinrichb/go_coverage_formatter
+	branch = main

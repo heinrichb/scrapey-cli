@@ -67,9 +67,14 @@ test:
 	if [ ! -f "$(TEST_STAMP)" ] || [ -n "$$(find $(GO_FILES) -newer "$(TEST_STAMP)" 2>/dev/null)" ]; then \
 		echo "$(CHANGE_MSG) $$TARGET..."; \
 		> "$(COVER_PROFILE)"; \
-		if gotestsum --format short-verbose ./... && \
-		   go test -cover -covermode=atomic -coverpkg=./... -coverprofile="$(COVER_PROFILE)" ./... >/dev/null; then \
+		SUBMODULES=$$(git config --file .gitmodules --get-regexp path | awk '{print $$2}'); \
+		PKGS=$$(go list ./... | grep -vF "$$SUBMODULES"); \
+		if gotestsum --format short-verbose $$PKGS && \
+		   go test -cover -covermode=atomic -coverpkg=$$(echo $$PKGS | tr ' ' ',') -coverprofile="$(COVER_PROFILE)" $$PKGS >/dev/null; then \
 			if [ -f "$(COVER_PROFILE)" ]; then \
+				echo "$$SUBMODULES" | while read SUBMODULE; do \
+					grep -v "$$SUBMODULE" "$(COVER_PROFILE)" > "$(COVER_PROFILE).tmp" && mv "$(COVER_PROFILE).tmp" "$(COVER_PROFILE)"; \
+				done; \
 				grep -v "cmd/scrapeycli/main.go:" "$(COVER_PROFILE)" > "$(COVER_PROFILE).tmp" && mv "$(COVER_PROFILE).tmp" "$(COVER_PROFILE)"; \
 				go tool cover -html="$(COVER_PROFILE)" -o "$(COVER_HTML)"; \
 				echo "Coverage file generated at: $(COVER_PROFILE)"; \
@@ -92,7 +97,7 @@ test:
 # ------------------------------------------------------------------------------
 coverage: test
 	@echo "================== COVERAGE SUMMARY =================="
-	@go tool cover -func="$(COVER_PROFILE)" | go run ./scripts/coverage_formatter.go
+	@go tool cover -func="$(COVER_PROFILE)" | go run ./scripts/go_coverage_formatter/coverage_formatter.go
 	@echo "====================================================="
 
 # ------------------------------------------------------------------------------
