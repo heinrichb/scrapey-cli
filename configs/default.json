@@ -3,7 +3,7 @@
 	"url": {
 		"base": "https://example.com",
 		"routes": ["/route1", "/route2", "*"],
-		"includeBase": false
+		"includeBase": true
 	},
 	"parseRules": {
 		"title": "title",

@@ -1,12 +1,15 @@
 package main
 
 import (
-	"flag"
-	"os"
+    "flag"
+    "fmt"
+    "os"
+    "path"
 
-	"github.com/fatih/color"
-	"github.com/heinrichb/scrapey-cli/pkg/config"
-	"github.com/heinrichb/scrapey-cli/pkg/utils"
+    "github.com/fatih/color"
+    "github.com/heinrichb/scrapey-cli/pkg/config"
+    "github.com/heinrichb/scrapey-cli/pkg/crawler"
+    "github.com/heinrichb/scrapey-cli/pkg/utils"
 )
 
 /*
@@ -58,8 +61,8 @@ It parses command-line flags, prints a welcome message, loads the configuration,
 applies CLI overrides using a ConfigOverride object, and prints confirmation messages.
 */
 func main() {
-	// Parse CLI flags.
-	flag.Parse()
+    // Parse CLI flags.
+    flag.Parse()
 
 	// Store the verbose flag in global state.
 	config.Verbose = verbose
@@ -67,18 +70,18 @@ func main() {
 	// Print a welcome message in cyan using our PrintColored utility.
 	utils.PrintColored("Welcome to Scrapey CLI!", "", color.FgCyan)
 
-	// Default to "configs/default.json" if no config path is provided.
-	if configPath == "" {
-		configPath = "configs/default.json"
-	}
+    // Default to "configs/default.json" if no config path is provided.
+    if configPath == "" {
+        configPath = "configs/default.json"
+    }
 
-	// Attempt to load the configuration from the specified file.
-	cfg, err := config.Load(configPath)
-	if err != nil {
-		// If loading fails, print an error message in red and exit.
-		utils.PrintColored("Failed to load config: ", err.Error(), color.FgRed)
-		os.Exit(1)
-	}
+    // Attempt to load the configuration from the specified file.
+    cfg, err := config.Load(configPath)
+    if err != nil {
+        // If loading fails, print an error message in red and exit.
+        utils.PrintColored("Failed to load config: ", err.Error(), color.FgRed)
+        os.Exit(1)
+    }
 
 	// Construct a partial ConfigOverride struct for CLI overrides.
 	cliOverrides := config.ConfigOverride{}
@@ -128,10 +131,29 @@ func main() {
 
 	// Print which routes will be scraped.
 	utils.PrintColored("Base URL: ", cfg.URL.Base, color.FgYellow)
-	if cfg.URL.IncludeBase {
+    // Create a new Crawler instance
+    c := crawler.New()
+	
+    if cfg.URL.IncludeBase {
 		utils.PrintColored("Including base URL in scraping.", "", color.FgGreen)
+        content, err := c.FetchURL(cfg.URL.Base)
+        if err != nil {
+            utils.PrintColored("Failed to fetch URL: ", err.Error(), color.FgRed)
+            os.Exit(1) // To-Do Handle error without exiting program
+        }
+        // Print the fetched content
+        fmt.Println("Fetched Content:")
+        fmt.Println(content)
 	}
 	for _, route := range cfg.URL.Routes {
 		utils.PrintColored("Scraping route: ", route, color.FgHiBlue)
+        content, err := c.FetchURL(path.Join(cfg.URL.Base,route))
+        if err != nil {
+            utils.PrintColored("Failed to fetch URL: ", err.Error(), color.FgRed)
+            os.Exit(1) // To-Do Handle error without exiting program
+        }
+        // Print the fetched content
+        fmt.Println("Fetched Content:")
+        fmt.Println(content)
 	}
 }
